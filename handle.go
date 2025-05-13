@@ -39,7 +39,7 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 		}
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
 			return c.Int("github_user_id", payload.Sender.ID).
-				Str("request_id", payload.Metadata.RequestId).
+				Str("request_id", payload.Metadata.RequestID).
 				Str("file_name", payload.Origin.FileName).
 				Str("action", string(payload.Action))
 		})

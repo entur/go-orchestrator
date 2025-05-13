@@ -41,12 +41,12 @@ func (s *ExampleSO) Destroy(context.Context, orchestrator.Request[ExampleManifes
 
 func ExampleOrchestrator() {
 	// Just an example manifest, here is where you specify _your_ sub-orchestrator
-	// ApiVersion, Kind and Metadata.Id is reqired
+	// ApiVersion, Kind and Metadata.ID is reqired
 	manifest := ExampleManifest{
 		ApiVersion: "orcestrator.entur.io/example/v1",
 		Kind:       "Example",
 		Metadata: orchestrator.Metadata{
-			Id: "mything",
+			ID: "mything",
 		},
 	}
 

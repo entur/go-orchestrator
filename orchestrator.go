@@ -10,7 +10,7 @@ import (
 type ApiVersion string
 type Kind string
 type Metadata struct {
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 type Orchestrator[T any] interface {
@@ -35,7 +35,7 @@ type Manifests[T any] struct {
 }
 
 type OuterMetadata struct {
-	RequestId string `json:"request_id"`
+	RequestID string `json:"request_id"`
 }
 type Resource struct {
 	Url string `json:"url"`
