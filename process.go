@@ -7,29 +7,32 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/rs/zerolog"
 )
 
 func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic, req Request[T]) error {
+	logger := zerolog.Ctx(ctx)
 	var result Result
 	var err error
 
 	switch req.Action {
-	case Apply:
+	case ActionApply:
 		result, err = o.Apply(ctx, req)
-	case Plan:
+	case ActionPlan:
 		result, err = o.Plan(ctx, req)
-	case PlanDestroy:
+	case ActionPlanDestroy:
 		result, err = o.PlanDestroy(ctx, req)
-	case Destroy:
+	case ActionDestroy:
 		result, err = o.Destroy(ctx, req)
 	}
 	if err != nil {
-		// TODO: create a Result that is an Error
-		return err
+		result.Code = resultCodeError
+		result.Summary = err.Error()
+		result.Changes.Clear()
 	}
 
 	response := req.ToResponse(result)
-
+	logger.Info().Msg(response.Output)
 	err = Respond(ctx, topic, response)
 	return err
 }

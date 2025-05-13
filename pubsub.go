@@ -10,6 +10,21 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 )
 
+func ParseEvent[T any](e event.Event) (Request[T], error) {
+	var req Request[T]
+	var data CloudEventData
+	err := e.DataAs(&data)
+	if err != nil {
+		return req, err
+	}
+
+	err = json.Unmarshal(data.Message.Data, &req)
+	if err != nil {
+		return req, err
+	}
+	return req, nil
+}
+
 type PubSubMessageAttributes struct{}
 
 type PubSubMessage struct {
@@ -68,7 +83,7 @@ func NewTopicCache(client *pubsub.Client) *TopicCache {
 	}
 }
 
-func NewMockCloudEvent[T any](manifest T, action Action) (*event.Event, error) {
+func NewMockEvent[T any](manifest T, action Action) (*event.Event, error) {
 
 	event := event.New(event.CloudEventsVersionV03)
 

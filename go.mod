@@ -1,4 +1,4 @@
-module github.com/entur/sub-orchestrator-sdk
+module github.com/entur/go-orchestrator
 
 go 1.24.2
 
