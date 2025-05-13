@@ -33,6 +33,9 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	response := req.ToResponse(result)
 	logger.Info().Interface("response", response).Msg("Response ready to send")
 	err = Respond(ctx, topic, response)
+	if err != nil {
+		logger.Error().Err(err).Msg("Could not respond")
+	}
 	return err
 }
 

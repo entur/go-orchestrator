@@ -66,5 +66,6 @@ func ExampleOrchestrator() {
 	}
 	// Output:
 	// INF Response ready to send action=plan file_name= github_user_id=0 request_id= response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgpDcmVhdGVkIGEgdGhpbmcKVXBkYXRlZDoKVXBkYXRlZCBhIHRoaW5nCkRlbGV0ZWQ6CkNyZWF0ZWQgYSB0aGluZwo=","result":"success"}
+	// ERR Could not respond error="no topic set, cannot respond" action=plan file_name= github_user_id=0 request_id=
 	// HANDLER ERR: no topic set, cannot respond
 }
