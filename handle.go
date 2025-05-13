@@ -29,9 +29,9 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 		opt(cfg)
 	}
 	cache := NewTopicCache(client)
-	logger := NewLogger(cfg.w)
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
+		logger := NewLogger(cfg.w)
 		payload, err := ParseEvent[T](cloudEvent)
 		if err != nil {
 			logger.Error().Err(err).Msg("ParseEvent failed")
