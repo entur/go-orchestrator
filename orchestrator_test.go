@@ -3,7 +3,6 @@ package orchestrator_test
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"cloud.google.com/go/pubsub"
 	orchestrator "github.com/entur/go-orchestrator"
@@ -55,12 +54,10 @@ func ExampleOrchestrator() {
 	so := ExampleSO{}
 	project := "not-a-project" // os.Getenv("PROJECT_ID")
 	client, _ := pubsub.NewClient(context.Background(), project)
-	// TODO: disable time part so tests can pass
-	handler := orchestrator.NewEventHandler(&so, client, orchestrator.WithCustomLogWriter(zerolog.ConsoleWriter{
-		NoColor:      true,
-		Out:          os.Stdout,
-		PartsExclude: []string{"time"},
-	}))
+	writer := zerolog.NewConsoleWriter()
+	writer.NoColor = true
+	writer.PartsExclude = []string{"timestamp"}
+	handler := orchestrator.NewEventHandler(&so, client, orchestrator.WithCustomLogWriter(writer))
 
 	event, _ := orchestrator.NewMockEvent(manifest, "plan")
 	err := handler(context.Background(), *event)
@@ -69,6 +66,6 @@ func ExampleOrchestrator() {
 		fmt.Println("HANDLER ERR:", err)
 	}
 	// Output:
-	// 10:46AM INF UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgpDcmVhdGVkIGEgdGhpbmcKVXBkYXRlZDoKVXBkYXRlZCBhIHRoaW5nCkRlbGV0ZWQ6CkRlbGV0ZWQgYSB0aGluZwo= action=plan file_name= github_user_id=0 request_id=
+	// INF UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgpDcmVhdGVkIGEgdGhpbmcKVXBkYXRlZDoKVXBkYXRlZCBhIHRoaW5nCkRlbGV0ZWQ6CkRlbGV0ZWQgYSB0aGluZwo= action=plan file_name= github_user_id=0 request_id=
 	// HANDLER ERR: no topic set, cannot respond
 }
