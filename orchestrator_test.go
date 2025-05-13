@@ -65,7 +65,7 @@ func ExampleOrchestrator() {
 		fmt.Println("HANDLER ERR:", err)
 	}
 	// Output:
-	// INF Response ready to send action=plan file_name= github_user_id=0 request_id= response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIENyZWF0ZWQgYSB0aGluZwpVcGRhdGVkOgohIFVwZGF0ZWQgYSB0aGluZwpEZWxldGVkOgotIENyZWF0ZWQgYSB0aGluZwo=","result":"success"}
-	// ERR Could not respond error="no topic set, cannot respond" action=plan file_name= github_user_id=0 request_id=
+	// INF Response ready to send gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id= gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIENyZWF0ZWQgYSB0aGluZwpVcGRhdGVkOgohIFVwZGF0ZWQgYSB0aGluZwpEZWxldGVkOgotIENyZWF0ZWQgYSB0aGluZwo=","result":"success"}
+	// ERR Could not respond error="no topic set, cannot respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=
 	// HANDLER ERR: no topic set, cannot respond
 }
