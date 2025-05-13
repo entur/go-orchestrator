@@ -2,7 +2,8 @@ package orchestrator
 
 import (
 	"context"
-	"io"
+
+	logging "github.com/entur/go-logging"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/cloudevents/sdk-go/v2/event"
@@ -10,14 +11,14 @@ import (
 )
 
 type EventHandlerConfig struct {
-	w io.Writer
+	logger *zerolog.Logger
 }
 
 type EventHandlerOption func(*EventHandlerConfig)
 
-func WithCustomLogWriter(w io.Writer) EventHandlerOption {
+func WithCustomLogger(logger zerolog.Logger) EventHandlerOption {
 	return func(c *EventHandlerConfig) {
-		c.w = w
+		c.logger = &logger
 	}
 }
 
@@ -28,10 +29,18 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 	for _, opt := range options {
 		opt(cfg)
 	}
+	
+	var pLogger zerolog.Logger
+	if cfg.logger != nil {
+		pLogger = *cfg.logger
+	} else {
+		pLogger = logging.New()
+	}
+
 	cache := NewTopicCache(client)
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
-		logger := NewLogger(cfg.w)
+		logger := pLogger.With().Logger()
 		payload, err := ParseEvent[T](cloudEvent)
 		if err != nil {
 			logger.Error().Err(err).Msg("ParseEvent failed")

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/entur/go-logging"
 	orchestrator "github.com/entur/go-orchestrator"
 	"github.com/rs/zerolog"
 )
@@ -39,7 +40,12 @@ func (s *ExampleSO) Destroy(context.Context, orchestrator.Request[ExampleManifes
 	return orchestrator.Result{}, fmt.Errorf("destroy not implemented")
 }
 
-func ExampleOrchestrator() {
+func Example() {
+	writer := zerolog.NewConsoleWriter()
+	writer.NoColor = true
+	writer.PartsExclude = []string{"timestamp"}
+	logger := logging.New(logging.WithWriter(writer))
+	
 	// Just an example manifest, here is where you specify _your_ sub-orchestrator
 	// ApiVersion, Kind and Metadata.ID is required
 	manifest := ExampleManifest{
@@ -53,19 +59,16 @@ func ExampleOrchestrator() {
 	so := ExampleSO{}
 	project := "not-a-project" // os.Getenv("PROJECT_ID")
 	client, _ := pubsub.NewClient(context.Background(), project)
-	writer := zerolog.NewConsoleWriter()
-	writer.NoColor = true
-	writer.PartsExclude = []string{"timestamp"}
-	handler := orchestrator.NewEventHandler(&so, client, orchestrator.WithCustomLogWriter(writer))
+	handler := orchestrator.NewEventHandler(&so, client, orchestrator.WithCustomLogger(logger))
 
 	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
 	err := handler(context.Background(), *event)
 
 	if err != nil {
-		fmt.Println("HANDLER ERR:", err)
+		logger.Error().Err(err).Msg("Encountered error")
 	}
 	// Output:
 	// INF Response ready to send gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id= gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIENyZWF0ZWQgYSB0aGluZwpVcGRhdGVkOgohIFVwZGF0ZWQgYSB0aGluZwpEZWxldGVkOgotIENyZWF0ZWQgYSB0aGluZwo=","result":"success"}
 	// ERR Could not respond error="no topic set, cannot respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=
-	// HANDLER ERR: no topic set, cannot respond
+	// ERR Encountered error error="no topic set, cannot respond"
 }
