@@ -94,12 +94,21 @@ type Result struct {
 }
 
 func (r *Result) String() string {
+	if !r.Success {
+		return r.Summary
+	}
+	if len(r.Creations) == 0 && len(r.Updates) == 0 && len(r.Deletions) == 0 {
+		return "No changes detected"
+	}
+
 	var builder strings.Builder
+	
 	builder.WriteString(r.Summary)
 	builder.WriteString("\n")
 	if len(r.Creations) > 0 {
 		builder.WriteString("Created:\n")
 		for _, created := range r.Creations {
+			builder.WriteString("+ ")
 			builder.WriteString(created)
 			builder.WriteString("\n")
 		}
@@ -107,6 +116,7 @@ func (r *Result) String() string {
 	if len(r.Updates) > 0 {
 		builder.WriteString("Updated:\n")
 		for _, updated := range r.Updates {
+			builder.WriteString("! ")
 			builder.WriteString(updated)
 			builder.WriteString("\n")
 		}
@@ -114,10 +124,12 @@ func (r *Result) String() string {
 	if len(r.Deletions) > 0 {
 		builder.WriteString("Deleted:\n")
 		for _, deleted := range r.Deletions {
+			builder.WriteString("- ")
 			builder.WriteString(deleted)
 			builder.WriteString("\n")
 		}
 	}
+
 	return builder.String()
 }
 
