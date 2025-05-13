@@ -89,7 +89,7 @@ func (r *Result) NoChanges() bool {
 	return len(r.Creations) == 0 && len(r.Updates) == 0 && len(r.Deletions) == 0
 }
 
-func (r *Result) ToString() string {
+func (r *Result) String() string {
 	var builder strings.Builder
 	builder.WriteString(r.Summary)
 	builder.WriteString("\n")
@@ -144,6 +144,6 @@ func (req Request[T]) ToResponse(r Result) Response {
 		ApiVersion: "orchestrator.entur.io/response/v1",
 		Metadata:   req.Metadata,
 		ResultCode: r.Code,
-		Output:     base64.StdEncoding.EncodeToString([]byte(r.ToString())),
+		Output:     base64.StdEncoding.EncodeToString([]byte(r.String())),
 	}
 }
