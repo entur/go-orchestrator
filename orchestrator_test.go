@@ -41,7 +41,7 @@ func (s *ExampleSO) Destroy(context.Context, orchestrator.Request[ExampleManifes
 
 func ExampleOrchestrator() {
 	// Just an example manifest, here is where you specify _your_ sub-orchestrator
-	// ApiVersion, Kind and Metadata.ID is reqired
+	// ApiVersion, Kind and Metadata.ID is required
 	manifest := ExampleManifest{
 		ApiVersion: "orcestrator.entur.io/example/v1",
 		Kind:       "Example",
@@ -65,7 +65,7 @@ func ExampleOrchestrator() {
 		fmt.Println("HANDLER ERR:", err)
 	}
 	// Output:
-	// INF Response ready to send action=plan file_name= github_user_id=0 request_id= response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgpDcmVhdGVkIGEgdGhpbmcKVXBkYXRlZDoKVXBkYXRlZCBhIHRoaW5nCkRlbGV0ZWQ6CkNyZWF0ZWQgYSB0aGluZwo=","result":"success"}
+	// INF Response ready to send action=plan file_name= github_user_id=0 request_id= response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIENyZWF0ZWQgYSB0aGluZwpVcGRhdGVkOgohIFVwZGF0ZWQgYSB0aGluZwpEZWxldGVkOgotIENyZWF0ZWQgYSB0aGluZwo=","result":"success"}
 	// ERR Could not respond error="no topic set, cannot respond" action=plan file_name= github_user_id=0 request_id=
 	// HANDLER ERR: no topic set, cannot respond
 }

@@ -33,7 +33,7 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	if err != nil {
 		msg = "An internal error occured"
 		code = ResultCodeError
-		logger.Error().Err(err).Interface("result", result).Msg(msg)
+		logger.Error().Err(err).Interface("gorch_result", result).Msg(msg)
 	} else {
 		msg = result.String()
 
@@ -47,7 +47,7 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	}
 
 	response := req.ToResponse(code, msg)
-	logger.Info().Interface("response", response).Msg("Response ready to send")
+	logger.Info().Interface("gorch_response", response).Msg("Response ready to send")
 	err = Respond(ctx, topic, response)
 	if err != nil {
 		logger.Error().Err(err).Msg("Could not respond")
@@ -56,12 +56,12 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	return err
 }
 
-func Respond(ctx context.Context, topic *pubsub.Topic, r Response) error {
+func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
 	// logger := zerolog.Ctx(ctx)
 	if topic == nil {
 		return fmt.Errorf("no topic set, cannot respond")
 	}
-	enc, err := json.Marshal(r)
+	enc, err := json.Marshal(res)
 	if err != nil {
 		return err
 	}

@@ -38,10 +38,10 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 			return err
 		}
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
-			return c.Int("github_user_id", payload.Sender.ID).
-				Str("request_id", payload.Metadata.RequestID).
-				Str("file_name", payload.Origin.FileName).
-				Str("action", string(payload.Action))
+			return c.Int("gorch_github_user_id", payload.Sender.ID).
+				Str("gorch_request_id", payload.Metadata.RequestID).
+				Str("gorch_file_name", payload.Origin.FileName).
+				Str("gorch_action", string(payload.Action))
 		})
 		ctx = logger.WithContext(ctx)
 

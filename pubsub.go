@@ -98,14 +98,9 @@ func NewTopicCache(client *pubsub.Client) *TopicCache {
 }
 
 func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.Event, error) {
-
-	event := event.New(event.CloudEventsVersionV03)
-
 	req := Request[T]{
 		ApiVersion:    "orchestrator.entur.io/request/v1",
-		Metadata: OuterMetadata{
-			RequestID: randStr(32),
-		},
+		Metadata: OuterMetadata{},
 		Sender: Sender{
 			Type: sender,
 		},
@@ -131,6 +126,8 @@ func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.E
 	if err != nil {
 		return nil, err
 	}
+
+	event := event.New(event.CloudEventsVersionV03)
 	event.DataEncoded = data
 	return &event, nil
 }
