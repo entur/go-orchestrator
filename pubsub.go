@@ -46,6 +46,9 @@ type TopicCache struct {
 }
 
 func (c *TopicCache) Topics() []*pubsub.Topic {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	var topics []*pubsub.Topic
 	
 	num := len(c.topics)
