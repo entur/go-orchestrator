@@ -27,14 +27,11 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	}
 	if err != nil {
 		result.Code = resultCodeError
-		result.Summary = err.Error()
-		result.Creations = nil
-		result.Updates = nil
-		result.Deletions = nil
+		logger.Error().Err(err).Interface("result", result).Msg("An internal error occured")
 	}
 
 	response := req.ToResponse(result)
-	logger.Info().Msg(response.Output)
+	logger.Info().Interface("response", response).Msg("Response ready to send")
 	err = Respond(ctx, topic, response)
 	return err
 }
