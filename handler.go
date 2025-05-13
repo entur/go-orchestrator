@@ -29,7 +29,7 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 	for _, opt := range options {
 		opt(cfg)
 	}
-	
+
 	var pLogger zerolog.Logger
 	if cfg.logger != nil {
 		pLogger = *cfg.logger

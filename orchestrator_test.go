@@ -23,7 +23,7 @@ type ExampleSO struct {
 func (s *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
 	result := orchestrator.Result{
 		Summary: "Plan all the things",
-		Success:    true,
+		Success: true,
 	}
 	result.Creations = append(result.Creations, "Created a thing")
 	result.Updates = append(result.Updates, "Updated a thing")
@@ -45,7 +45,7 @@ func Example() {
 	writer.NoColor = true
 	writer.PartsExclude = []string{"timestamp"}
 	logger := logging.New(logging.WithWriter(writer))
-	
+
 	// Just an example manifest, here is where you specify _your_ sub-orchestrator
 	// ApiVersion, Kind and Metadata.ID is required
 	manifest := ExampleManifest{

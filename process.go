@@ -12,7 +12,7 @@ import (
 
 func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic, req Request[T]) error {
 	logger := zerolog.Ctx(ctx)
-	
+
 	var result Result
 	var err error
 
@@ -52,7 +52,7 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	if err != nil {
 		logger.Error().Err(err).Msg("Could not respond")
 	}
-	
+
 	return err
 }
 

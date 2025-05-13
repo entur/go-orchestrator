@@ -50,7 +50,7 @@ func (c *TopicCache) Topics() []*pubsub.Topic {
 	defer c.mu.Unlock()
 
 	var topics []*pubsub.Topic
-	
+
 	num := len(c.topics)
 	if num > 0 {
 		topics := make([]string, 0, num)
@@ -102,8 +102,8 @@ func NewTopicCache(client *pubsub.Client) *TopicCache {
 
 func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.Event, error) {
 	req := Request[T]{
-		ApiVersion:    "orchestrator.entur.io/request/v1",
-		Metadata: OuterMetadata{},
+		ApiVersion: "orchestrator.entur.io/request/v1",
+		Metadata:   OuterMetadata{},
 		Sender: Sender{
 			Type: sender,
 		},
@@ -134,5 +134,3 @@ func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.E
 	event.DataEncoded = data
 	return &event, nil
 }
-
-

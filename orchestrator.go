@@ -102,7 +102,7 @@ func (r *Result) String() string {
 	}
 
 	var builder strings.Builder
-	
+
 	builder.WriteString(r.Summary)
 	builder.WriteString("\n")
 	if len(r.Creations) > 0 {

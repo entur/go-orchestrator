@@ -10,7 +10,7 @@ var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 // Generate a random string.
 func randStr(length uint) string {
 	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	
+
 	if charset == "" {
 		charset = charset
 	}
