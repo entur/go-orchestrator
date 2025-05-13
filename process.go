@@ -12,6 +12,7 @@ import (
 
 func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic, req Request[T]) error {
 	logger := zerolog.Ctx(ctx)
+	
 	var result Result
 	var err error
 
@@ -25,17 +26,33 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	case ActionDestroy:
 		result, err = o.Destroy(ctx, req)
 	}
+
+	var code ResultCode
+	var msg string
+
 	if err != nil {
-		result.Code = resultCodeError
-		logger.Error().Err(err).Interface("result", result).Msg("An internal error occured")
+		msg = "An internal error occured"
+		code = ResultCodeError
+		logger.Error().Err(err).Interface("result", result).Msg(msg)
+	} else {
+		msg = result.String()
+
+		if result.Success == false {
+			code = ResultCodeFailure
+		} else if len(result.Creations) == 0 && len(result.Updates) == 0 && len(result.Deletions) == 0 {
+			code = ResultCodeNoop
+		} else {
+			code = ResultCodeSuccess
+		}
 	}
 
-	response := req.ToResponse(result)
+	response := req.ToResponse(code, msg)
 	logger.Info().Interface("response", response).Msg("Response ready to send")
 	err = Respond(ctx, topic, response)
 	if err != nil {
 		logger.Error().Err(err).Msg("Could not respond")
 	}
+	
 	return err
 }
 

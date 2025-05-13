@@ -74,8 +74,8 @@ type ResultCode string
 const (
 	ResultCodeSuccess ResultCode = "success"
 	ResultCodeFailure ResultCode = "failure"
-	resultCodeNoop    ResultCode = "noop"
-	resultCodeError   ResultCode = "error"
+	ResultCodeNoop    ResultCode = "noop"
+	ResultCodeError   ResultCode = "error"
 )
 
 type Response struct {
@@ -85,8 +85,12 @@ type Response struct {
 	Output     string        `json:"output"`
 }
 
-func (r *Result) NoChanges() bool {
-	return len(r.Creations) == 0 && len(r.Updates) == 0 && len(r.Deletions) == 0
+type Result struct {
+	Summary   string
+	Success   bool // Defaults to false to avoid unauthorized muck-ups
+	Creations []string
+	Updates   []string
+	Deletions []string
 }
 
 func (r *Result) String() string {
@@ -117,14 +121,6 @@ func (r *Result) String() string {
 	return builder.String()
 }
 
-type Result struct {
-	Summary   string
-	Code      ResultCode
-	Creations []string
-	Updates   []string
-	Deletions []string
-}
-
 type Request[T any] struct {
 	ApiVersion    string        `json:"apiVersion"`
 	Metadata      OuterMetadata `json:"metadata"`
@@ -136,14 +132,11 @@ type Request[T any] struct {
 	Manifest      Manifests[T]  `json:"manifest"`
 }
 
-func (req Request[T]) ToResponse(r Result) Response {
-	if r.Code == ResultCodeSuccess && r.NoChanges() {
-		r.Code = resultCodeNoop
-	}
+func (req Request[T]) ToResponse(code ResultCode, msg string) Response {
 	return Response{
 		ApiVersion: "orchestrator.entur.io/response/v1",
 		Metadata:   req.Metadata,
-		ResultCode: r.Code,
-		Output:     base64.StdEncoding.EncodeToString([]byte(r.String())),
+		ResultCode: code,
+		Output:     base64.StdEncoding.EncodeToString([]byte(msg)),
 	}
 }

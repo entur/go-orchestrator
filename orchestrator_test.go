@@ -22,7 +22,7 @@ type ExampleSO struct {
 func (s *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
 	result := orchestrator.Result{
 		Summary: "Plan all the things",
-		Code:    orchestrator.ResultCodeSuccess,
+		Success:    true,
 	}
 	result.Creations = append(result.Creations, "Created a thing")
 	result.Updates = append(result.Updates, "Updated a thing")
@@ -58,7 +58,7 @@ func ExampleOrchestrator() {
 	writer.PartsExclude = []string{"timestamp"}
 	handler := orchestrator.NewEventHandler(&so, client, orchestrator.WithCustomLogWriter(writer))
 
-	event, _ := orchestrator.NewMockEvent(manifest, "plan")
+	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
 	err := handler(context.Background(), *event)
 
 	if err != nil {
