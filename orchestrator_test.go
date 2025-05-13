@@ -23,11 +23,10 @@ func (s *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleMa
 	result := orchestrator.Result{
 		Summary: "Plan all the things",
 		Code:    orchestrator.ResultCodeSuccess,
-		Changes: orchestrator.Changes{},
 	}
-	result.Changes.AddCreate("Created a thing")
-	result.Changes.AddUpdate("Updated a thing")
-	result.Changes.AddDelete("Deleted a thing")
+	result.Creations = append(result.Creations, "Created a thing")
+	result.Updates = append(result.Updates, "Updated a thing")
+	result.Deletions = append(result.Deletions, "Created a thing")
 	return result, nil
 }
 func (s *ExampleSO) PlanDestroy(ctx context.Context, req orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
@@ -66,6 +65,6 @@ func ExampleOrchestrator() {
 		fmt.Println("HANDLER ERR:", err)
 	}
 	// Output:
-	// INF UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgpDcmVhdGVkIGEgdGhpbmcKVXBkYXRlZDoKVXBkYXRlZCBhIHRoaW5nCkRlbGV0ZWQ6CkRlbGV0ZWQgYSB0aGluZwo= action=plan file_name= github_user_id=0 request_id=
+	// INF UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgpDcmVhdGVkIGEgdGhpbmcKVXBkYXRlZDoKVXBkYXRlZCBhIHRoaW5nCkRlbGV0ZWQ6CkNyZWF0ZWQgYSB0aGluZwo= action=plan file_name= github_user_id=0 request_id=
 	// HANDLER ERR: no topic set, cannot respond
 }

@@ -28,7 +28,9 @@ func Process[T any](ctx context.Context, o Orchestrator[T], topic *pubsub.Topic,
 	if err != nil {
 		result.Code = resultCodeError
 		result.Summary = err.Error()
-		result.Changes.Clear()
+		result.Creations = nil
+		result.Updates = nil
+		result.Deletions = nil
 	}
 
 	response := req.ToResponse(result)
