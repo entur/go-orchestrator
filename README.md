@@ -1,8 +1,5 @@
 # go-orchestrator
 
-> [!WARNING]  
-> Work in progress!
-
 ## Start using the SDK
 
 You need to enable private go modules from entur:
