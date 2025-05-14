@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	cloud.google.com/go/pubsub v1.49.0
 	github.com/cloudevents/sdk-go/v2 v2.16.0
-	github.com/entur/go-logging v0.0.0-20250513135738-8582942990ca
+	github.com/entur/go-logging v0.0.0-20250513192515-3e84480c04e6
 	github.com/rs/zerolog v1.34.0
 )
 
