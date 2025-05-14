@@ -1,8 +1,9 @@
-name: Go
+name: Release
 
 on:
-  pull_request:
-    branches: [ "main" ]
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -20,3 +21,9 @@ jobs:
 
     - name: Test
       run: go test -race -v ./...
+
+  release-please:
+    needs: [build]
+    uses: entur/gha-meta/.github/workflows/release.yml@v1
+    with:
+      release_type: go
