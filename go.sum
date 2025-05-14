@@ -25,8 +25,8 @@ github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSV
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/entur/go-logging v0.0.0-20250513192515-3e84480c04e6 h1:oLtwWBIxXt/wbBwX/9+lah0r8Av3KSsYjQCYW5u01bc=
-github.com/entur/go-logging v0.0.0-20250513192515-3e84480c04e6/go.mod h1:3fV7jnjH3Tepcxkx5Dw22FyEiJOU0fnF+8pAZoVfjJg=
+github.com/entur/go-logging v1.1.0 h1:zNwBQLvU1tuAGgj22TTUq3Qr7WOyn/sT6nLE/98i3Mw=
+github.com/entur/go-logging v1.1.0/go.mod h1:3fV7jnjH3Tepcxkx5Dw22FyEiJOU0fnF+8pAZoVfjJg=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
