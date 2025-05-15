@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/entur/go-orchestrator/compare/v1.1.0...v2.0.0) (2025-05-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* Added iam lookup resource and tried to simplify SO creation a bit ([#9](https://github.com/entur/go-orchestrator/issues/9))
+
+### Features
+
+* Added iam lookup resource and tried to simplify SO creation a bit ([#9](https://github.com/entur/go-orchestrator/issues/9)) ([8e917e0](https://github.com/entur/go-orchestrator/commit/8e917e000ca7615db5399c8f2e4d6eef3a793969))
+
 ## [1.1.0](https://github.com/entur/go-orchestrator/compare/v1.0.0...v1.1.0) (2025-05-14)
 
 
