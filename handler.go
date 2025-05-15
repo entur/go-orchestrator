@@ -3,29 +3,29 @@ package orchestrator
 import (
 	"context"
 
+	"cloud.google.com/go/pubsub"
 	logging "github.com/entur/go-logging"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/rs/zerolog"
 )
 
-type EventHandlerConfig struct {
+type HandlerConfig struct {
 	logger *zerolog.Logger
 }
 
-type EventHandlerOption func(*EventHandlerConfig)
+type HandlerOption func(*HandlerConfig)
 
-func WithCustomLogger(logger zerolog.Logger) EventHandlerOption {
-	return func(c *EventHandlerConfig) {
+func WithCustomLogger(logger zerolog.Logger) HandlerOption {
+	return func(c *HandlerConfig) {
 		c.logger = &logger
 	}
 }
 
 type EventHandler func(context.Context, event.Event) error
 
-func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options ...EventHandlerOption) EventHandler {
-	cfg := &EventHandlerConfig{}
+func NewEventHandler[T any](so Orchestrator[T], options ...HandlerOption) EventHandler {
+	cfg := &HandlerConfig{}
 	for _, opt := range options {
 		opt(cfg)
 	}
@@ -37,6 +37,7 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 		pLogger = logging.New()
 	}
 
+	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
 	cache := NewTopicCache(client)
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
@@ -46,6 +47,7 @@ func NewEventHandler[T any](so Orchestrator[T], client *pubsub.Client, options .
 			logger.Error().Err(err).Msg("ParseEvent failed")
 			return err
 		}
+
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
 			return c.Int("gorch_github_user_id", payload.Sender.ID).
 				Str("gorch_request_id", payload.Metadata.RequestID).

@@ -10,35 +10,6 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 )
 
-func ParseEvent[T any](e event.Event) (Request[T], error) {
-	var req Request[T]
-	var data EventData
-	err := e.DataAs(&data)
-	if err != nil {
-		return req, err
-	}
-
-	err = json.Unmarshal(data.Message.Data, &req)
-	if err != nil {
-		return req, err
-	}
-	return req, nil
-}
-
-type PubSubMessageAttributes struct{}
-
-type PubSubMessage struct {
-	ID          string                  `json:"messageId"`
-	PublishTime string                  `json:"publishTime"`
-	Attributes  PubSubMessageAttributes `json:"attributes"`
-	Data        []byte                  `json:"data"`
-}
-
-type EventData struct {
-	Subscription string
-	Message      PubSubMessage
-}
-
 type TopicCache struct {
 	mu     sync.Mutex
 	client *pubsub.Client
@@ -98,6 +69,35 @@ func NewTopicCache(client *pubsub.Client) *TopicCache {
 		client: client,
 		topics: map[string]*pubsub.Topic{},
 	}
+}
+
+type PubSubMessageAttributes struct{}
+
+type PubSubMessage struct {
+	ID          string                  `json:"messageId"`
+	PublishTime string                  `json:"publishTime"`
+	Attributes  PubSubMessageAttributes `json:"attributes"`
+	Data        []byte                  `json:"data"`
+}
+
+type EventData struct {
+	Subscription string
+	Message      PubSubMessage
+}
+
+func ParseEvent[T any](e event.Event) (Request[T], error) {
+	var req Request[T]
+	var data EventData
+	err := e.DataAs(&data)
+	if err != nil {
+		return req, err
+	}
+
+	err = json.Unmarshal(data.Message.Data, &req)
+	if err != nil {
+		return req, err
+	}
+	return req, nil
 }
 
 func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.Event, error) {

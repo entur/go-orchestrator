@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"strings"
+
+	"google.golang.org/api/idtoken"
 )
 
 // Manifest Types
@@ -14,6 +16,7 @@ type Metadata struct {
 }
 
 type Orchestrator[T any] interface {
+	ProjectID() string
 	Plan(context.Context, Request[T]) (Result, error)
 	PlanDestroy(context.Context, Request[T]) (Result, error)
 	Apply(context.Context, Request[T]) (Result, error)
@@ -37,12 +40,18 @@ type Manifests[T any] struct {
 type OuterMetadata struct {
 	RequestID string `json:"request_id"`
 }
-type Resource struct {
+
+type IAMResource struct {
 	Url string `json:"url"`
 }
 
+func (resource *IAMResource) ToClient() IAMLookupClient {
+	client, _ := idtoken.NewClient(context.Background(), resource.Url)
+	return NewIAMLookupClient(client, resource.Url)
+}
+
 type Resources struct {
-	IAM Resource `json:"iamLookup"`
+	IAM IAMResource `json:"iamLookup"`
 }
 
 type GitRepository struct {
