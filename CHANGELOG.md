@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/entur/go-orchestrator/compare/v1.2.0...v1.2.1) (2025-05-19)
+
+
+### Bug Fixes
+
+* requestId not request_id ([#12](https://github.com/entur/go-orchestrator/issues/12)) ([58a6ee7](https://github.com/entur/go-orchestrator/commit/58a6ee73b32e5371e1a214ea0cdaafaf61ddb70b))
+
 ## [1.2.0](https://github.com/entur/go-orchestrator/compare/v2.0.0...v1.2.0) (2025-05-16)
 
 ### Features
