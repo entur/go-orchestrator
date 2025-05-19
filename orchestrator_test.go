@@ -103,7 +103,7 @@ func Example() {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
 	// Output:
-	// INF Response ready to send gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id= gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"request_id":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
+	// INF Response ready to send gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id= gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":""},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Could not respond error="no topic set, cannot respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=
 	// ERR Encountered error error="no topic set, cannot respond"
 }
