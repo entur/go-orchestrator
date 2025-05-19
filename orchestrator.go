@@ -38,7 +38,7 @@ type Manifests[T any] struct {
 }
 
 type OuterMetadata struct {
-	RequestID string `json:"request_id"`
+	RequestID string `json:"requestId"`
 }
 
 type IAMResource struct {
