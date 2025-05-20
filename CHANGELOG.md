@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/entur/go-orchestrator/compare/v1.2.1...v1.2.2) (2025-05-20)
+
+
+### Bug Fixes
+
+* options for mock event ([#16](https://github.com/entur/go-orchestrator/issues/16)) ([765a668](https://github.com/entur/go-orchestrator/commit/765a6687f51223ea3d080ddcb5c17521c3534a98))
+
 ## [1.2.1](https://github.com/entur/go-orchestrator/compare/v1.2.0...v1.2.1) (2025-05-19)
 
 
