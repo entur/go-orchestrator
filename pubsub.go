@@ -100,10 +100,14 @@ func ParseEvent[T any](e event.Event) (Request[T], error) {
 	return req, nil
 }
 
-func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.Event, error) {
-	req := Request[T]{
+type MockEventOption[T any] func(*Request[T])
+
+func NewMockEvent[T any](manifest T, sender SenderType, action Action, options ...MockEventOption[T]) (*event.Event, error) {
+	req := &Request[T]{
 		ApiVersion: "orchestrator.entur.io/request/v1",
-		Metadata:   OuterMetadata{},
+		Metadata: OuterMetadata{
+			RequestID: "mockid",
+		},
 		Sender: Sender{
 			Type: sender,
 		},
@@ -111,7 +115,10 @@ func NewMockEvent[T any](manifest T, sender SenderType, action Action) (*event.E
 		ResponseTopic: "topic",
 		Manifest:      Manifests[T]{Old: nil, New: manifest},
 	}
-	reqdata, err := json.Marshal(&req)
+	for _, opt := range options {
+		opt(req)
+	}
+	reqdata, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
