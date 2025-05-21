@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/entur/go-orchestrator/compare/v1.2.2...v1.2.3) (2025-05-21)
+
+
+### Bug Fixes
+
+* **refactor:** Miscellaneous changes relating to docs and function names ([#19](https://github.com/entur/go-orchestrator/issues/19)) ([3e9c7b0](https://github.com/entur/go-orchestrator/commit/3e9c7b0f41298cada237593d662e469eaefaf7c8))
+
 ## [1.2.2](https://github.com/entur/go-orchestrator/compare/v1.2.1...v1.2.2) (2025-05-20)
 
 
