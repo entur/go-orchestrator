@@ -53,6 +53,7 @@ type IAMLookupClient struct {
 	url    string
 }
 
+// List all of the GCP project ids associated with an app-factory id.
 func (iam *IAMLookupClient) GCPAppProjectIDS(ctx context.Context, appID string) ([]string, error) {
 	type AppProjectsRequest struct {
 		AppID string `json:"appId"`
@@ -79,7 +80,8 @@ func (iam *IAMLookupClient) GCPAppProjectIDS(ctx context.Context, appID string) 
 	return resBody.ProjectIDS, nil
 }
 
-func (iam *IAMLookupClient) GCPUserHasRoleInProject(ctx context.Context, email string, role string, ProjectIDS ...string) (bool, error) {
+// Check if the user (email) has the specified Sub-Orchestrator role in *all* of the given GCP projects.
+func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, ProjectIDS ...string) (bool, error) {
 	type UserAccessRequest struct {
 		User     string `json:"user"`
 		Role     string `json:"role"`
@@ -112,6 +114,7 @@ func (iam *IAMLookupClient) GCPUserHasRoleInProject(ctx context.Context, email s
 	return true, nil
 }
 
+// List all of the entra id groups (without the @ suffix) that a user (email) belongs to.
 func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string) ([]string, error) {
 	type UserGroupsRequest struct {
 		User string `json:"user"`
