@@ -30,8 +30,8 @@ func (c *topicCache) Topics() []*pubsub.Topic {
 
 	num := len(c.topics)
 	if num > 0 {
-		topics := make([]string, 0, num)
-		for _, topic := range topics {
+		topics = make([]*pubsub.Topic, 0, num)
+		for _, topic := range c.topics {
 			topics = append(topics, topic)
 		}
 	}
