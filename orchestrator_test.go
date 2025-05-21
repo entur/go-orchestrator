@@ -49,7 +49,7 @@ func (so *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[Example
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		client := req.Resources.IAM.ToClient()
 
-		access, err := client.GCPUserHasRolesInProject(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
+		access, err := client.GCPUserHasRoleInProject(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
 		if err != nil {
 			return orchestrator.Result{}, err
 		}

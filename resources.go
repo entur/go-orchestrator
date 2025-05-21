@@ -79,7 +79,7 @@ func (iam *IAMLookupClient) GCPAppProjectIDS(ctx context.Context, appID string) 
 	return resBody.ProjectIDS, nil
 }
 
-func (iam *IAMLookupClient) GCPUserHasRolesInProject(ctx context.Context, email string, role string, ProjectIDS ...string) (bool, error) {
+func (iam *IAMLookupClient) GCPUserHasRoleInProject(ctx context.Context, email string, role string, ProjectIDS ...string) (bool, error) {
 	type UserAccessRequest struct {
 		User     string `json:"user"`
 		Role     string `json:"role"`
