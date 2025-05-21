@@ -3,73 +3,9 @@ package orchestrator
 import (
 	"encoding/base64"
 	"encoding/json"
-	"strings"
-	"sync"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/cloudevents/sdk-go/v2/event"
 )
-
-type TopicCache struct {
-	mu     sync.Mutex
-	client *pubsub.Client
-	topics map[string]*pubsub.Topic
-}
-
-func (c *TopicCache) Topics() []*pubsub.Topic {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	var topics []*pubsub.Topic
-
-	num := len(c.topics)
-	if num > 0 {
-		topics := make([]string, 0, num)
-		for _, topic := range topics {
-			topics = append(topics, topic)
-		}
-	}
-
-	return topics
-}
-
-func (c *TopicCache) Topic(projectID string, topicID string) *pubsub.Topic {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	key := projectID + topicID
-
-	topic, ok := c.topics[key]
-	if !ok {
-		topic = c.client.TopicInProject(topicID, projectID)
-		c.topics[key] = topic
-	}
-
-	return topic
-}
-
-func (c *TopicCache) TopicFullID(id string) *pubsub.Topic {
-	if !strings.HasPrefix(id, "projects/") {
-		return nil
-	}
-
-	i := strings.Index(id[9:], "/")
-	if i == -1 {
-		return nil
-	}
-
-	projectID := id[9 : 9+i]
-	topicID := id[strings.LastIndex(id, "/")+1:]
-
-	return c.Topic(projectID, topicID)
-}
-
-func NewTopicCache(client *pubsub.Client) *TopicCache {
-	return &TopicCache{
-		client: client,
-		topics: map[string]*pubsub.Topic{},
-	}
-}
 
 type PubSubMessageAttributes struct{}
 
