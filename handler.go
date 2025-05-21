@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"context"
+	"strings"
+	"sync"
 
 	"cloud.google.com/go/pubsub"
 	logging "github.com/entur/go-logging"
@@ -9,6 +11,75 @@ import (
 	"github.com/cloudevents/sdk-go/v2/event"
 	"github.com/rs/zerolog"
 )
+
+// -----------------------
+// Helpers
+// -----------------------
+
+type topicCache struct {
+	mu     sync.Mutex
+	client *pubsub.Client
+	topics map[string]*pubsub.Topic
+}
+
+func (c *topicCache) Topics() []*pubsub.Topic {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var topics []*pubsub.Topic
+
+	num := len(c.topics)
+	if num > 0 {
+		topics := make([]string, 0, num)
+		for _, topic := range topics {
+			topics = append(topics, topic)
+		}
+	}
+
+	return topics
+}
+
+func (c *topicCache) Topic(projectID string, topicID string) *pubsub.Topic {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	key := projectID + topicID
+
+	topic, ok := c.topics[key]
+	if !ok {
+		topic = c.client.TopicInProject(topicID, projectID)
+		c.topics[key] = topic
+	}
+
+	return topic
+}
+
+func (c *topicCache) TopicFullID(id string) *pubsub.Topic {
+	if !strings.HasPrefix(id, "projects/") {
+		return nil
+	}
+
+	i := strings.Index(id[9:], "/")
+	if i == -1 {
+		return nil
+	}
+
+	projectID := id[9 : 9+i]
+	topicID := id[strings.LastIndex(id, "/")+1:]
+
+	return c.Topic(projectID, topicID)
+}
+
+func newTopicCache(client *pubsub.Client) *topicCache {
+	return &topicCache{
+		client: client,
+		topics: map[string]*pubsub.Topic{},
+	}
+}
+
+// -----------------------
+// Handlers
+// -----------------------
 
 type HandlerConfig struct {
 	logger *zerolog.Logger
@@ -38,7 +109,7 @@ func NewEventHandler[T any](so Orchestrator[T], options ...HandlerOption) EventH
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
-	cache := NewTopicCache(client)
+	cache := newTopicCache(client)
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
 		logger := pLogger.With().Logger()

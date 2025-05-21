@@ -8,19 +8,47 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-// Manifest Types
+// -----------------------
+// Platform Orchestrator
+// -----------------------
+
 type ApiVersion string
+
 type Kind string
+
 type Metadata struct {
 	ID string `json:"id"`
 }
 
-type Orchestrator[T any] interface {
-	ProjectID() string
-	Plan(context.Context, Request[T]) (Result, error)
-	PlanDestroy(context.Context, Request[T]) (Result, error)
-	Apply(context.Context, Request[T]) (Result, error)
-	Destroy(context.Context, Request[T]) (Result, error)
+type OuterMetadata struct {
+	RequestID string `json:"requestId"`
+}
+
+type ResultCode string
+
+// The possible results of the sub-orchestrator response
+const (
+	ResultCodeSuccess ResultCode = "success"
+	ResultCodeFailure ResultCode = "failure"
+	ResultCodeNoop    ResultCode = "noop"
+	ResultCodeError   ResultCode = "error"
+)
+
+type Output string
+
+type Resource struct {
+	Url string `json:"url"`
+}
+
+type IAMResource = Resource
+
+func (resource *IAMResource) ToClient() IAMLookupClient {
+	client, _ := idtoken.NewClient(context.Background(), resource.Url)
+	return NewIAMLookupClient(client, resource.Url)
+}
+
+type Resources struct {
+	IAM IAMResource `json:"iamLookup"`
 }
 
 type Action string
@@ -31,28 +59,6 @@ const (
 	ActionPlanDestroy Action = "plan_destroy"
 	ActionDestroy     Action = "destroy"
 )
-
-type Manifests[T any] struct {
-	Old *T `json:"old"`
-	New T  `json:"new"`
-}
-
-type OuterMetadata struct {
-	RequestID string `json:"requestId"`
-}
-
-type IAMResource struct {
-	Url string `json:"url"`
-}
-
-func (resource *IAMResource) ToClient() IAMLookupClient {
-	client, _ := idtoken.NewClient(context.Background(), resource.Url)
-	return NewIAMLookupClient(client, resource.Url)
-}
-
-type Resources struct {
-	IAM IAMResource `json:"iamLookup"`
-}
 
 type GitRepository struct {
 	HtmlUrl string `json:"htmlUrl"`
@@ -76,22 +82,48 @@ type Sender struct {
 	Type  SenderType `json:"type"`
 }
 
-type Output string
-type ResultCode string
-
-// The possible results of the sub-orchestrator response
-const (
-	ResultCodeSuccess ResultCode = "success"
-	ResultCodeFailure ResultCode = "failure"
-	ResultCodeNoop    ResultCode = "noop"
-	ResultCodeError   ResultCode = "error"
-)
+type Manifests[T any] struct {
+	Old *T `json:"old"`
+	New T  `json:"new"`
+}
 
 type Response struct {
 	ApiVersion string        `json:"apiVersion"`
 	Metadata   OuterMetadata `json:"metadata"`
 	ResultCode ResultCode    `json:"result"`
 	Output     string        `json:"output"`
+}
+
+type Request[T any] struct {
+	ApiVersion    string        `json:"apiVersion"`
+	Metadata      OuterMetadata `json:"metadata"`
+	Resources     Resources     `json:"resources"`
+	ResponseTopic string        `json:"responseTopic"`
+	Action        Action        `json:"action"`
+	Origin        Origin        `json:"origin"`
+	Sender        Sender        `json:"sender"`
+	Manifest      Manifests[T]  `json:"manifest"`
+}
+
+func (req Request[T]) ToResponse(code ResultCode, msg string) Response {
+	return Response{
+		ApiVersion: "orchestrator.entur.io/response/v1",
+		Metadata:   req.Metadata,
+		ResultCode: code,
+		Output:     base64.StdEncoding.EncodeToString([]byte(msg)),
+	}
+}
+
+// -----------------------
+// Sub Orchestrator
+// -----------------------
+
+type Orchestrator[T any] interface {
+	ProjectID() string
+	Plan(context.Context, Request[T]) (Result, error)
+	PlanDestroy(context.Context, Request[T]) (Result, error)
+	Apply(context.Context, Request[T]) (Result, error)
+	Destroy(context.Context, Request[T]) (Result, error)
 }
 
 type Result struct {
@@ -140,24 +172,4 @@ func (r *Result) String() string {
 	}
 
 	return builder.String()
-}
-
-type Request[T any] struct {
-	ApiVersion    string        `json:"apiVersion"`
-	Metadata      OuterMetadata `json:"metadata"`
-	Resources     Resources     `json:"resources"`
-	ResponseTopic string        `json:"responseTopic"`
-	Action        Action        `json:"action"`
-	Origin        Origin        `json:"origin"`
-	Sender        Sender        `json:"sender"`
-	Manifest      Manifests[T]  `json:"manifest"`
-}
-
-func (req Request[T]) ToResponse(code ResultCode, msg string) Response {
-	return Response{
-		ApiVersion: "orchestrator.entur.io/response/v1",
-		Metadata:   req.Metadata,
-		ResultCode: code,
-		Output:     base64.StdEncoding.EncodeToString([]byte(msg)),
-	}
 }
