@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type ExampleManifest struct {
+type ExampleSOManifest struct {
 	ApiVersion orchestrator.ApiVersion `json:"apiVersion"`
 	Kind       orchestrator.Kind       `json:"kind"`
 	Metadata   orchestrator.Metadata   `json:"metadata"`
@@ -17,14 +17,15 @@ type ExampleManifest struct {
 
 type ExampleSO struct {
 	/* you can have some internal state here */
+	projectID string
 }
 
-func (s *ExampleSO) ProjectID() string {
+func (so *ExampleSO) ProjectID() string {
 	/* your project id */
-	return ""
+	return so.projectID
 }
 
-func (s *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
+func (so *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	return orchestrator.Result{
 		Summary: "Plan all the things",
 		Success: true,
@@ -39,10 +40,10 @@ func (s *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleMa
 		},
 	}, nil
 }
-func (s *ExampleSO) PlanDestroy(ctx context.Context, req orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
+func (so *ExampleSO) PlanDestroy(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	return orchestrator.Result{}, fmt.Errorf("plandestroy not implemented")
 }
-func (s *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
+func (so *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		client := req.Resources.IAM.ToClient()
 
@@ -74,9 +75,20 @@ func (s *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[ExampleM
 		},
 	}, nil
 }
-func (s *ExampleSO) Destroy(context.Context, orchestrator.Request[ExampleManifest]) (orchestrator.Result, error) {
+
+func (so *ExampleSO) Destroy(context.Context, orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	return orchestrator.Result{}, fmt.Errorf("destroy not implemented")
 }
+
+func NewExampleSO(projectID string) *ExampleSO {
+	return &ExampleSO{
+		projectID: projectID,
+	}
+}
+
+// -----------------------
+// Minimal Sub-Orchestrator Example
+// -----------------------
 
 func Example() {
 	writer := zerolog.NewConsoleWriter()
@@ -86,7 +98,7 @@ func Example() {
 
 	// Just an example manifest, here is where you specify _your_ sub-orchestrator
 	// ApiVersion, Kind and Metadata.ID is required
-	manifest := ExampleManifest{
+	manifest := ExampleSOManifest{
 		ApiVersion: "orcestrator.entur.io/example/v1",
 		Kind:       "Example",
 		Metadata: orchestrator.Metadata{
@@ -94,10 +106,14 @@ func Example() {
 		},
 	}
 
-	so := ExampleSO{}
-	handler := orchestrator.NewEventHandler(&so, orchestrator.WithCustomLogger(logger))
+	// Optional modifier of your mockevent
+	mockEventModifier := func(r *orchestrator.Request[ExampleSOManifest]) {
+		r.Metadata.RequestID = "ExampleId"
+	}
 
-	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, func(r *orchestrator.Request[ExampleManifest]) { r.Metadata.RequestID = "ExampleId" })
+	so := NewExampleSO("mysoproject")
+	handler := orchestrator.NewEventHandler(so, orchestrator.WithCustomLogger(logger))
+	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
 	err := handler(context.Background(), *event)
 
 	if err != nil {

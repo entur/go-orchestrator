@@ -26,12 +26,11 @@ type OuterMetadata struct {
 
 type ResultCode string
 
-// The possible results of the sub-orchestrator response
 const (
-	ResultCodeSuccess ResultCode = "success"
-	ResultCodeFailure ResultCode = "failure"
-	ResultCodeNoop    ResultCode = "noop"
-	ResultCodeError   ResultCode = "error"
+	ResultCodeSuccess ResultCode = "success" // Sub-Orchestrator succeded in processing the action
+	ResultCodeFailure ResultCode = "failure" // Sub-Orchestrator detected a user failure when processing the action
+	ResultCodeNoop    ResultCode = "noop"    // Sub-Orchestrator detected no changes after processing the action
+	ResultCodeError   ResultCode = "error"   // Sub-Orchestrator experienced an internal error when processing the action
 )
 
 type Output string
@@ -40,15 +39,15 @@ type Resource struct {
 	Url string `json:"url"`
 }
 
-type IAMResource = Resource
+type ResourceIAMLookup = Resource
 
-func (resource *IAMResource) ToClient() IAMLookupClient {
+func (resource *ResourceIAMLookup) ToClient() IAMLookupClient {
 	client, _ := idtoken.NewClient(context.Background(), resource.Url)
 	return NewIAMLookupClient(client, resource.Url)
 }
 
 type Resources struct {
-	IAM IAMResource `json:"iamLookup"`
+	IAM ResourceIAMLookup `json:"iamLookup"`
 }
 
 type Action string
@@ -127,11 +126,11 @@ type Orchestrator[T any] interface {
 }
 
 type Result struct {
-	Summary   string
-	Success   bool // Defaults to false to avoid unauthorized muck-ups
-	Creations []string
-	Updates   []string
-	Deletions []string
+	Summary   string   // Your failure or success summary.
+	Success   bool     // If the action succeeded or not. A false value indicates a user error
+	Creations []string // A list of resources that are planned/being created.
+	Updates   []string // A list of resources that are planned/being updated.
+	Deletions []string // A list of resources that are planned/being deleted.
 }
 
 func (r *Result) String() string {
