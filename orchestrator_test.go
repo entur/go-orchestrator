@@ -40,9 +40,11 @@ func (so *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleS
 		},
 	}, nil
 }
+
 func (so *ExampleSO) PlanDestroy(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	return orchestrator.Result{}, fmt.Errorf("plandestroy not implemented")
 }
+
 func (so *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		client := req.Resources.IAM.ToClient()
@@ -76,7 +78,7 @@ func (so *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[Example
 	}, nil
 }
 
-func (so *ExampleSO) Destroy(context.Context, orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
+func (so *ExampleSO) Destroy(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
 	return orchestrator.Result{}, fmt.Errorf("destroy not implemented")
 }
 
