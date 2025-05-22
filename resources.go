@@ -16,6 +16,9 @@ import (
 
 // See https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
 func request(ctx context.Context, client *http.Client, method string, url string, headers map[string]string, reqBody any, resBody any) (int, error) {
+	if client == nil {
+		return 0, fmt.Errorf("no client passed to request")
+	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
 		return 0, fmt.Errorf("http request body failed to marshal: %w", err)
@@ -35,7 +38,9 @@ func request(ctx context.Context, client *http.Client, method string, url string
 	if err != nil {
 		return 0, fmt.Errorf("http '%s' request failed: %w", method, err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	dec := json.NewDecoder(res.Body)
 	err = dec.Decode(resBody)
@@ -83,7 +88,7 @@ func (iam *IAMLookupClient) GCPAppProjectIDS(ctx context.Context, appID string) 
 }
 
 // Check if the user (email) has the specified Sub-Orchestrator role in *all* of the given GCP projects.
-func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, ProjectIDS ...string) (bool, error) {
+func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, projectIDs ...string) (bool, error) {
 	type UserAccessRequest struct {
 		User     string `json:"user"`
 		Role     string `json:"role"`
@@ -101,8 +106,8 @@ func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email 
 	}
 	resBody := UserAccessResponse{}
 
-	for i := range ProjectIDS {
-		reqBody.Resource = fmt.Sprintf("projects/%s", ProjectIDS[i])
+	for i := range projectIDs {
+		reqBody.Resource = fmt.Sprintf("projects/%s", projectIDs[i])
 
 		status, err := request(ctx, iam.client, http.MethodPost, url, nil, reqBody, &resBody)
 		if err != nil {
