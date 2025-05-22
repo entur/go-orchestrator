@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -15,6 +17,11 @@ import (
 // -----------------------
 // Helpers
 // -----------------------
+
+type manifestHeader struct {
+	ApiVersion ApiVersion `json:"apiVersion"`
+	Kind Kind `json:"kind"`
+}
 
 type topicCache struct {
 	mu     sync.Mutex
@@ -81,6 +88,57 @@ func newTopicCache(client *pubsub.Client) *topicCache {
 // Handlers
 // -----------------------
 
+func HandleRequest(ctx context.Context, so Orchestrator, req Request) (res ResponseResult, err error) {
+	var header manifestHeader
+	err = json.Unmarshal(req.Manifest.New, &header)
+	if err != nil {
+		// TODO: Wrap error
+		return
+	}
+	
+	for _, h := range so.Handlers() {
+		if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
+			before, ok := so.(OrchestratorMiddlewareBefore)
+			if ok {
+				err = before.MiddlewareBefore(ctx, req, &res)
+				if err != nil {
+					// TODO: Wrap error
+					return
+				}
+			}
+
+			switch req.Action {
+			case ActionApply:
+				err = h.Apply(ctx, req, &res)
+			case ActionPlan:
+				err = h.Plan(ctx, req, &res)
+			case ActionPlanDestroy:
+				err = h.PlanDestroy(ctx, req, &res)
+			case ActionDestroy:
+				err = h.Destroy(ctx, req, &res)
+			default:
+				err = fmt.Errorf("TODO")
+			}
+
+			if err != nil {
+				// TODO: Wrap error
+				return
+			}
+			
+			after, ok := so.(OrchestratorMiddlewareAfter)
+			if ok {
+				// TODO: Wrap error
+				err = after.MiddlewareAfter(ctx, req, &res)
+			}
+			return
+		}
+	}
+
+	// TODO: better error?
+	err = fmt.Errorf("found no matching handler")
+	return
+}
+
 type HandlerConfig struct {
 	logger *zerolog.Logger
 }
@@ -95,7 +153,7 @@ func WithCustomLogger(logger zerolog.Logger) HandlerOption {
 
 type EventHandler func(context.Context, event.Event) error
 
-func NewEventHandler[T any](so Orchestrator[T], options ...HandlerOption) EventHandler {
+func NewEventHandler[T any](so Orchestrator, options ...HandlerOption) EventHandler {
 	cfg := &HandlerConfig{}
 	for _, opt := range options {
 		opt(cfg)
@@ -113,21 +171,64 @@ func NewEventHandler[T any](so Orchestrator[T], options ...HandlerOption) EventH
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
 		logger := pLogger.With().Logger()
-		payload, err := ParseEvent[T](cloudEvent)
+		
+		req, err := ParseEvent(cloudEvent)
 		if err != nil {
 			logger.Error().Err(err).Msg("ParseEvent failed")
 			return err
 		}
-
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
-			return c.Int("gorch_github_user_id", payload.Sender.ID).
-				Str("gorch_request_id", payload.Metadata.RequestID).
-				Str("gorch_file_name", payload.Origin.FileName).
-				Str("gorch_action", string(payload.Action))
+			return c.Int("gorch_github_user_id", req.Sender.ID).
+				Str("gorch_request_id", req.Metadata.RequestID).
+				Str("gorch_file_name", req.Origin.FileName).
+				Str("gorch_action", string(req.Action))
 		})
 		ctx = logger.WithContext(ctx)
+		
+		result, err := HandleRequest(ctx, so, req)
 
-		topic := cache.TopicFullID(payload.ResponseTopic)
-		return Process(ctx, so, topic, payload)
+		// TODO:
+		// Cleanup all of this an/or split it into a new function.
+		// Preferably the altter if we are making other event handlers
+		var code ResultCode
+		var msg string
+
+		if err != nil || result.mistakes != nil {
+			if result.mistakes != nil {
+				logger.Error().Stack().Err(result.mistakes).Msg("")
+			}
+			if err != nil {
+				logger.Error().Err(err).Interface("gorch_result", result).Msg(msg)
+			}
+
+			msg = "An internal error occured"
+			code = ResultCodeError
+		} else {
+			msg = result.String()
+
+			if !result.Succeeded() {
+				code = ResultCodeFailure
+			} else if !result.HasChanges() {
+				code = ResultCodeNoop
+			} else {
+				code = ResultCodeSuccess
+			}
+		}
+
+		topic := cache.TopicFullID(req.ResponseTopic)
+		if topic == nil {
+			return fmt.Errorf("no topic set, cannot respond")
+		}
+		res := NewResponse(req.Metadata, code, msg)
+		enc, err := json.Marshal(res)
+		if err != nil {
+			return err
+		}
+
+		pubres := topic.Publish(ctx, &pubsub.Message{
+			Data: enc,
+		})
+		_, err = pubres.Get(ctx)
+		return err
 	}
 }

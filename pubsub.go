@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 )
@@ -21,8 +22,8 @@ type EventData struct {
 	Message      PubSubMessage
 }
 
-func ParseEvent[T any](e event.Event) (Request[T], error) {
-	var req Request[T]
+func ParseEvent(e event.Event) (Request, error) {
+	var req Request
 	var data EventData
 	err := e.DataAs(&data)
 	if err != nil {
@@ -36,10 +37,16 @@ func ParseEvent[T any](e event.Event) (Request[T], error) {
 	return req, nil
 }
 
-type MockEventOption[T any] func(*Request[T])
+type MockEventOption func(*Request)
 
-func NewMockEvent[T any](manifest T, sender SenderType, action Action, options ...MockEventOption[T]) (*event.Event, error) {
-	req := &Request[T]{
+func NewMockEvent[T any](manifest T, sender SenderType, action Action, options ...MockEventOption) (*event.Event, error) {
+	b, err := json.Marshal(manifest)
+	if err != nil {
+		// TODO
+		return nil, fmt.Errorf("")
+	}
+
+	req := &Request{
 		ApiVersion: "orchestrator.entur.io/request/v1",
 		Metadata: OuterMetadata{
 			RequestID: "mockid",
@@ -49,7 +56,7 @@ func NewMockEvent[T any](manifest T, sender SenderType, action Action, options .
 		},
 		Action:        action,
 		ResponseTopic: "topic",
-		Manifest:      Manifests[T]{Old: nil, New: manifest},
+		Manifest:      Manifests{Old: nil, New: b},
 	}
 	for _, opt := range options {
 		opt(req)

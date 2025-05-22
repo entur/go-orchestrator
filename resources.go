@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"google.golang.org/api/idtoken"
 )
 
 // -----------------------
@@ -141,7 +143,10 @@ func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string)
 	return resBody.Groups, nil
 }
 
-func NewIAMLookupClient(client *http.Client, url string) IAMLookupClient {
+type IAMLookupClientOptions = idtoken.ClientOption
+
+func NewIAMLookupClient(url string, options ...IAMLookupClientOptions) IAMLookupClient {
+	client, _ := idtoken.NewClient(context.Background(), url, options...)
 	return IAMLookupClient{
 		client: client,
 		url:    url,
