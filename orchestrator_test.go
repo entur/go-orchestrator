@@ -26,6 +26,7 @@ func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
 func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
 	fmt.Println("Before it begins")
 	if req.Sender.Type == orchestrator.SenderTypeUser {
+		fmt.Println("#####")
 		client := orchestrator.NewIAMLookupClient(req.Resources.IAM.Url)
 
 		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
@@ -120,7 +121,7 @@ func Example() {
 	mockEventModifier := func(r *orchestrator.Request) {
 		r.Metadata.RequestID = "ExampleId"
 	}
-	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeBot, orchestrator.ActionPlan, mockEventModifier)
+	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
 
 	handler := orchestrator.NewEventHandler(so, orchestrator.WithCustomLogger(logger))
 	// functions.CloudEvent("OrchestratorEvent", handler)
@@ -132,13 +133,12 @@ func Example() {
 	}
 	// Output:
 	// INF Created a new EventHandler
-	// INF Handling request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId req={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":""}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"bot"}}
+	// INF Handling request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId req={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"example.com"}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}}
 	// INF Found handler for orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Executing MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
-	// INF Performed plan on orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Executing MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// After it's done
-	// INF Got response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId res={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
+	// #####
+	// ERR error="no client passed to request" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_result={}
+	// INF Got response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId res={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"QW4gaW50ZXJuYWwgZXJyb3Igb2NjdXJlZA==","result":"error"}
 	// ERR Encountered error error="no topic set, cannot respond"
 }

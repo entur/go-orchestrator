@@ -55,6 +55,11 @@ func NewMockEvent(manifest any, sender SenderType, action Action, options ...Moc
 		Action:        action,
 		ResponseTopic: "topic",
 		Manifest:      Manifests{Old: nil, New: newManifest},
+		Resources: Resources{
+			IAM: ResourceIAMLookup{
+				Url: "example.com",
+			},
+		},
 	}
 	for _, opt := range options {
 		opt(req)
