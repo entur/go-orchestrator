@@ -131,7 +131,7 @@ func HandleRequest(ctx context.Context, so Orchestrator, req Request) (res Respo
 			after, ok := so.(OrchestratorMiddlewareAfter)
 			if ok {
 				// TODO: Wrap error
-				logger.Info().Msg("Executing MiddlewareBefore")
+				logger.Info().Msg("Executing MiddlewareAfter")
 				err = after.MiddlewareAfter(ctx, req, &res)
 			}
 			return

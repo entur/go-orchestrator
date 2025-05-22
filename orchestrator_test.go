@@ -23,6 +23,29 @@ func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
 	return so.handlers
 }
 
+func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+	fmt.Println("Before it begins")
+	if req.Sender.Type == orchestrator.SenderTypeUser {
+		client := orchestrator.NewIAMLookupClient(req.Resources.IAM.Url)
+
+		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
+		if err != nil {
+			return err
+		}
+
+		if access == false {
+			res.Done("You don't have access to ent-someproject-dev", false)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, _ *orchestrator.ResponseResult) error {
+	fmt.Println("After it's done")
+	return nil
+}
+
 type ExampleSpecV1 struct {
 	Name string `json:"name"`
 }
@@ -30,6 +53,7 @@ type ExampleKindV1 struct {
 	orchestrator.ManifestHeader
 	Spec ExampleSpecV1 `json:"spec"`
 }
+
 type ExampleKindV1Handler struct{}
 
 func (h *ExampleKindV1Handler) ApiVersion() orchestrator.ApiVersion {
@@ -50,19 +74,6 @@ func (so *ExampleKindV1Handler) PlanDestroy(ctx context.Context, req orchestrato
 }
 
 func (so *ExampleKindV1Handler) Apply(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
-	if req.Sender.Type == orchestrator.SenderTypeUser {
-		client := orchestrator.NewIAMLookupClient(req.Resources.IAM.Url)
-
-		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
-		if err != nil {
-			return err
-		}
-
-		if access == false {
-			res.Done("You don't have access to ent-someproject-dev", false)
-			return nil
-		}
-	}
 	res.Create("A thing")
 	res.Update("A thing")
 	res.Delete("A thing")
@@ -93,12 +104,8 @@ func Example() {
 	writer.PartsExclude = []string{"timestamp"}
 	logger := logging.New(logging.WithWriter(writer))
 
-	// Optional modifier of your mockevent
-	mockEventModifier := func(r *orchestrator.Request) {
-		r.Metadata.RequestID = "ExampleId"
-	}
-
 	so := NewExampleSO("mysoproject")
+
 	manifest := ExampleKindV1{
 		Spec: ExampleSpecV1{
 			Name: "Test Name",
@@ -109,8 +116,15 @@ func Example() {
 		},
 	}
 
+	// Optional modifier of your mockevent
+	mockEventModifier := func(r *orchestrator.Request) {
+		r.Metadata.RequestID = "ExampleId"
+	}
+	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeBot, orchestrator.ActionPlan, mockEventModifier)
+
 	handler := orchestrator.NewEventHandler(so, orchestrator.WithCustomLogger(logger))
-	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
+	// functions.CloudEvent("OrchestratorEvent", handler)
+
 	err := handler(context.Background(), *event)
 
 	if err != nil {
@@ -118,9 +132,13 @@ func Example() {
 	}
 	// Output:
 	// INF Created a new EventHandler
-	// INF Handling request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId req={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":""}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}}
+	// INF Handling request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId req={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":""}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"bot"}}
 	// INF Found handler for orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Executing MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// Before it begins
 	// INF Performed plan on orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Executing MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// After it's done
 	// INF Got response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId res={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered error error="no topic set, cannot respond"
 }
