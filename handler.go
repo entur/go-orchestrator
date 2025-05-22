@@ -19,11 +19,6 @@ import (
 // Helpers
 // -----------------------
 
-type ManifestHeader struct {
-	ApiVersion ApiVersion `json:"apiVersion"`
-	Kind       Kind       `json:"kind"`
-}
-
 type topicCache struct {
 	mu     sync.Mutex
 	client *pubsub.Client
@@ -93,14 +88,14 @@ func newTopicCache(client *pubsub.Client) *topicCache {
 // Maybe there's it's better to rename this to process again, but receive / respond sound neater
 func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	logger := zerolog.Ctx(ctx)
-	
+
 	var res Result
 	var header ManifestHeader
 
 	err := json.Unmarshal(req.Manifest.New, &header)
 	if err == nil {
 		match := false
-		
+
 		for _, h := range so.Handlers() {
 			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
 				logger.Debug().Msgf("Found handler for %s %s", h.ApiVersion(), h.Kind())
@@ -134,7 +129,7 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 					// TODO: Wrap error
 					break
 				}
-				
+
 				after, ok := so.(OrchestratorMiddlewareAfter)
 				if ok {
 					logger.Debug().Msg("Executing MiddlewareAfter")
@@ -158,7 +153,7 @@ func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
 	if topic == nil {
 		return fmt.Errorf("no topic set, unable to respond")
 	}
-	
+
 	enc, err := json.Marshal(res)
 	if err != nil {
 		return err
@@ -209,13 +204,13 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
 		logger := parentLogger.With().Logger()
-		
+
 		req, err := ParseEvent(cloudEvent)
 		if err != nil {
 			logger.Error().Err(err).Msg("Encountered an internal error when calling ParseEvent")
 			return err
 		}
-		
+
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
 			return c.Int("gorch_github_user_id", req.Sender.ID).
 				Str("gorch_request_id", req.Metadata.RequestID).
@@ -223,8 +218,8 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 				Str("gorch_action", string(req.Action))
 		})
 		ctx = logger.WithContext(ctx)
-		logger.Info().Interface("gorch_request", req).Msg("Ready to receive and process request")		
-		
+		logger.Info().Interface("gorch_request", req).Msg("Ready to receive and process request")
+
 		result := Receive(ctx, so, req)
 		err = result.errs
 		if err != nil {
@@ -243,7 +238,7 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 		if err != nil {
 			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to the request")
 		}
-		
+
 		return err
 	}
 }

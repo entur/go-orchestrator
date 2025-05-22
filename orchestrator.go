@@ -74,6 +74,11 @@ type Sender struct {
 	Type  SenderType `json:"type"`
 }
 
+type ManifestHeader struct {
+	ApiVersion ApiVersion `json:"apiVersion"`
+	Kind       Kind       `json:"kind"`
+}
+
 type Manifest = json.RawMessage
 
 type Manifests struct {
@@ -141,7 +146,7 @@ type OrchestratorMiddlewareAfter interface {
 type Result struct {
 	lock bool
 	errs error
-	
+
 	summary   string   // Your failure or success summary.
 	success   bool     // If the action succeeded or not. A false value indicates a user error
 	creations []string // A list of resources that are planned/being created.
@@ -212,7 +217,7 @@ func (r *Result) Deletions() []string {
 func (r *Result) Code() ResultCode {
 	if r.errs != nil {
 		return ResultCodeError
-	} 
+	}
 	if !r.success {
 		return ResultCodeFailure
 	}
