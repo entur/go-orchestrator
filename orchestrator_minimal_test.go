@@ -37,6 +37,7 @@ type MinimalHandler struct{}
 func (h *MinimalHandler) ApiVersion() orchestrator.ApiVersion {
 	return "orchestrator.entur.io/example/v1"
 }
+
 func (h *MinimalHandler) Kind() orchestrator.Kind { return "Example" }
 
 func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {

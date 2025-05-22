@@ -144,7 +144,7 @@ type OrchestratorMiddlewareAfter interface {
 }
 
 type Result struct {
-	lock bool
+	done bool
 	errs error
 
 	summary   string   // Your failure or success summary.
@@ -163,18 +163,18 @@ func (r *Result) Errors() error {
 }
 
 func (r *Result) Done(summary string, success bool) {
-	if r.lock {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to mark an already locked result as done"))
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to mark an already finished result as done"))
 	} else {
-		r.lock = true
+		r.done = true
 		r.summary = summary
 		r.success = success
 	}
 }
 
 func (r *Result) Create(change ...string) {
-	if r.lock {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a create change to an already locked result"))
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a create change to an already finished result"))
 	} else {
 		r.creations = append(r.creations, change...)
 	}
@@ -187,8 +187,8 @@ func (r *Result) Creations() []string {
 }
 
 func (r *Result) Update(change ...string) {
-	if r.lock {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add an update change to an already locked result"))
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add an update change to an already finished result"))
 	} else {
 		r.updates = append(r.updates, change...)
 	}
@@ -201,8 +201,8 @@ func (r *Result) Updates() []string {
 }
 
 func (r *Result) Delete(change ...string) {
-	if r.lock {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a delete change to an already locked result"))
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a delete change to an already finished result"))
 	} else {
 		r.deletions = append(r.deletions, change...)
 	}
