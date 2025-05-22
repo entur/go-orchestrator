@@ -18,10 +18,6 @@ type ApiVersion string
 
 type Kind string
 
-type Metadata struct {
-	ID string `json:"id"`
-}
-
 type OuterMetadata struct {
 	RequestID string `json:"requestId"`
 }
@@ -93,7 +89,7 @@ type Request struct {
 	Action        Action        `json:"action"`
 	Origin        Origin        `json:"origin"`
 	Sender        Sender        `json:"sender"`
-	Manifest      Manifests  `json:"manifest"`
+	Manifest      Manifests     `json:"manifest"`
 }
 
 type Response struct {
@@ -143,9 +139,9 @@ type OrchestratorMiddlewareAfter interface {
 }
 
 type ResponseResult struct {
-	lock bool
+	lock     bool
 	mistakes error
-	
+
 	summary   string   // Your failure or success summary.
 	success   bool     // If the action succeeded or not. A false value indicates a user error
 	creations []string // A list of resources that are planned/being created.

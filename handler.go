@@ -18,9 +18,9 @@ import (
 // Helpers
 // -----------------------
 
-type manifestHeader struct {
+type ManifestHeader struct {
 	ApiVersion ApiVersion `json:"apiVersion"`
-	Kind Kind `json:"kind"`
+	Kind       Kind       `json:"kind"`
 }
 
 type topicCache struct {
@@ -89,17 +89,18 @@ func newTopicCache(client *pubsub.Client) *topicCache {
 // -----------------------
 
 func HandleRequest(ctx context.Context, so Orchestrator, req Request) (res ResponseResult, err error) {
-	var header manifestHeader
+	logger := zerolog.Ctx(ctx)
+	var header ManifestHeader
 	err = json.Unmarshal(req.Manifest.New, &header)
 	if err != nil {
-		// TODO: Wrap error
-		return
+		return res, err
 	}
-	
 	for _, h := range so.Handlers() {
 		if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
+			logger.Info().Msg(fmt.Sprintf("Found handler for %s %s", h.ApiVersion(), h.Kind()))
 			before, ok := so.(OrchestratorMiddlewareBefore)
 			if ok {
+				logger.Info().Msg("Executing MiddlewareBefore")
 				err = before.MiddlewareBefore(ctx, req, &res)
 				if err != nil {
 					// TODO: Wrap error
@@ -121,13 +122,16 @@ func HandleRequest(ctx context.Context, so Orchestrator, req Request) (res Respo
 			}
 
 			if err != nil {
+				logger.Error().Err(err).Msg(fmt.Sprintf("Could not perform handler action %s", req.Action))
 				// TODO: Wrap error
 				return
 			}
-			
+			logger.Info().Msg(fmt.Sprintf("Performed %s on %s %s", req.Action, h.ApiVersion(), h.Kind()))
+
 			after, ok := so.(OrchestratorMiddlewareAfter)
 			if ok {
 				// TODO: Wrap error
+				logger.Info().Msg("Executing MiddlewareBefore")
 				err = after.MiddlewareAfter(ctx, req, &res)
 			}
 			return
@@ -153,7 +157,7 @@ func WithCustomLogger(logger zerolog.Logger) HandlerOption {
 
 type EventHandler func(context.Context, event.Event) error
 
-func NewEventHandler[T any](so Orchestrator, options ...HandlerOption) EventHandler {
+func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 	cfg := &HandlerConfig{}
 	for _, opt := range options {
 		opt(cfg)
@@ -168,10 +172,11 @@ func NewEventHandler[T any](so Orchestrator, options ...HandlerOption) EventHand
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
 	cache := newTopicCache(client)
+	pLogger.Info().Msg("Created a new EventHandler")
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
 		logger := pLogger.With().Logger()
-		
+
 		req, err := ParseEvent(cloudEvent)
 		if err != nil {
 			logger.Error().Err(err).Msg("ParseEvent failed")
@@ -184,7 +189,9 @@ func NewEventHandler[T any](so Orchestrator, options ...HandlerOption) EventHand
 				Str("gorch_action", string(req.Action))
 		})
 		ctx = logger.WithContext(ctx)
-		
+
+		logger.Info().Interface("req", req).Msg("Handling request")
+
 		result, err := HandleRequest(ctx, so, req)
 
 		// TODO:
@@ -215,16 +222,19 @@ func NewEventHandler[T any](so Orchestrator, options ...HandlerOption) EventHand
 			}
 		}
 
-		topic := cache.TopicFullID(req.ResponseTopic)
-		if topic == nil {
-			return fmt.Errorf("no topic set, cannot respond")
-		}
 		res := NewResponse(req.Metadata, code, msg)
+
+		logger.Info().Interface("res", res).Msg("Got response")
+
 		enc, err := json.Marshal(res)
 		if err != nil {
 			return err
 		}
 
+		topic := cache.TopicFullID(req.ResponseTopic)
+		if topic == nil {
+			return fmt.Errorf("no topic set, cannot respond")
+		}
 		pubres := topic.Publish(ctx, &pubsub.Message{
 			Data: enc,
 		})
