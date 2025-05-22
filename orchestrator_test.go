@@ -134,12 +134,12 @@ func Example() {
 	// Output:
 	// DBG Created a new EventHandler
 	// INF Ready to receive and process request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"example.com"}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}} gorch_request_id=ExampleId
-	// DBG Found handler for orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Found ManifestHandler orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Executing MiddlewareBefore handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
 	// #####
-	// ERR Encountered an internal error whilst processing the request error="no client passed to request" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_result_creations=null gorch_result_deletions=null gorch_result_updates=null
+	// ERR Encountered an internal error whilst processing request error="so middleware (before): no client passed to request" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_result_creations=null gorch_result_deletions=null gorch_result_updates=null
 	// INF Ready to send response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"SW50ZXJuYWwgZXJyb3I=","result":"error"}
-	// ERR Encountered an internal error whilst responding to the request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// ERR Encountered error error="no topic set, unable to respond"
 }

@@ -39,27 +39,27 @@ func (h *MinimalHandler) ApiVersion() orchestrator.ApiVersion {
 }
 func (h *MinimalHandler) Kind() orchestrator.Kind { return "Example" }
 
-func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, res *orchestrator.Result) error {
-	res.Create("A thing")
-	res.Update("A thing")
-	res.Delete("A thing")
-	res.Done("Plan all the things", true)
+func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Plan all the things", true)
 	return nil
 }
 
-func (so *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, res *orchestrator.Result) error {
+func (so *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("plandestroy not implemented")
 }
 
-func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, res *orchestrator.Result) error {
-	res.Create("A thing")
-	res.Update("A thing")
-	res.Delete("A thing")
-	res.Done("Applied all the things", true)
+func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Applied all the things", true)
 	return nil
 }
 
-func (so *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, res *orchestrator.Result) error {
+func (so *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("destroy not implemented")
 }
 
