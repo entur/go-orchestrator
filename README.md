@@ -2,14 +2,25 @@
 
 ## Start using the SDK
 
-You need to enable private go modules from entur:
+Typical dependencies
+
+```go
+import (
+	"github.com/entur/go-logging"
+	orchestrator "github.com/entur/go-orchestrator"
+)
+```
+
+Now
 
 ```sh
-go env -w GOPRIVATE='github.com/entur/*'
-env GIT_TERMINAL_PROMPT=1 go get github.com/entur/go-orchestrator # to fix if you default to https
-# git config --global --add url."git@github.com:".insteadOf "https://github.com/" # if you want ssh default always
+go mod tidy
 ```
 
 ## Minimal example
+
+See `./orchestrator_minimal_test.go` for a complete test.
+
+## Full example
 
 See `./orchestrator_test.go` for a complete test.
