@@ -23,7 +23,7 @@ func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
 	return so.handlers
 }
 
-func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	fmt.Println("Before it begins")
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		fmt.Println("#####")
@@ -35,14 +35,14 @@ func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Reques
 		}
 
 		if access == false {
-			res.Done("You don't have access to ent-someproject-dev", false)
+			r.Done("You don't have access to ent-someproject-dev", false)
 			return nil
 		}
 	}
 	return nil
 }
 
-func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, _ *orchestrator.ResponseResult) error {
+func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, _ *orchestrator.Result) error {
 	fmt.Println("After it's done")
 	return nil
 }
@@ -62,27 +62,27 @@ func (h *ExampleKindV1Handler) ApiVersion() orchestrator.ApiVersion {
 }
 func (h *ExampleKindV1Handler) Kind() orchestrator.Kind { return "Example" }
 
-func (so *ExampleKindV1Handler) Plan(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
-	res.Create("A thing")
-	res.Update("A thing")
-	res.Delete("A thing")
-	res.Done("Plan all the things", true)
+func (so *ExampleKindV1Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Plan all the things", true)
 	return nil
 }
 
-func (so *ExampleKindV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+func (so *ExampleKindV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("plandestroy not implemented")
 }
 
-func (so *ExampleKindV1Handler) Apply(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
-	res.Create("A thing")
-	res.Update("A thing")
-	res.Delete("A thing")
-	res.Done("Plan all the things", true)
+func (so *ExampleKindV1Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Plan all the things", true)
 	return nil
 }
 
-func (so *ExampleKindV1Handler) Destroy(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+func (so *ExampleKindV1Handler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("destroy not implemented")
 }
 
@@ -132,13 +132,14 @@ func Example() {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
 	// Output:
-	// INF Created a new EventHandler
-	// INF Handling request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId req={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"example.com"}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}}
-	// INF Found handler for orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Executing MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Created a new EventHandler
+	// INF Ready to receive and process request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"example.com"}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}} gorch_request_id=ExampleId
+	// DBG Found handler for orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Executing MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
 	// #####
-	// ERR error="no client passed to request" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_result={}
-	// INF Got response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId res={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"QW4gaW50ZXJuYWwgZXJyb3Igb2NjdXJlZA==","result":"error"}
-	// ERR Encountered error error="no topic set, cannot respond"
+	// ERR Encountered an internal error whilst processing the request error="no client passed to request" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_result_creations=null gorch_result_deletions=null gorch_result_updates=null
+	// INF Ready to send response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"SW50ZXJuYWwgZXJyb3I=","result":"error"}
+	// ERR Encountered an internal error whilst responding to the request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// ERR Encountered error error="no topic set, unable to respond"
 }

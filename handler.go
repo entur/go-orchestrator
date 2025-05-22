@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -85,63 +86,94 @@ func newTopicCache(client *pubsub.Client) *topicCache {
 }
 
 // -----------------------
-// Handlers
+// Processing
 // -----------------------
 
-func HandleRequest(ctx context.Context, so Orchestrator, req Request) (res ResponseResult, err error) {
+// NOTE:
+// Maybe there's it's better to rename this to process again, but receive / respond sound neater
+func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	logger := zerolog.Ctx(ctx)
+	
+	var res Result
 	var header ManifestHeader
-	err = json.Unmarshal(req.Manifest.New, &header)
-	if err != nil {
-		return res, err
-	}
-	for _, h := range so.Handlers() {
-		if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
-			logger.Info().Msg(fmt.Sprintf("Found handler for %s %s", h.ApiVersion(), h.Kind()))
-			before, ok := so.(OrchestratorMiddlewareBefore)
-			if ok {
-				logger.Info().Msg("Executing MiddlewareBefore")
-				err = before.MiddlewareBefore(ctx, req, &res)
+
+	err := json.Unmarshal(req.Manifest.New, &header)
+	if err == nil {
+		match := false
+		
+		for _, h := range so.Handlers() {
+			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
+				logger.Debug().Msgf("Found handler for %s %s", h.ApiVersion(), h.Kind())
+				match = true
+
+				before, ok := so.(OrchestratorMiddlewareBefore)
+				if ok {
+					logger.Debug().Msg("Executing MiddlewareBefore")
+					err = before.MiddlewareBefore(ctx, req, &res)
+					if err != nil {
+						// TODO: Wrap error
+						break
+					}
+				}
+
+				logger.Debug().Msgf("Executing %s on %s %s", req.Action, h.ApiVersion(), h.Kind())
+				switch req.Action {
+				case ActionApply:
+					err = h.Apply(ctx, req, &res)
+				case ActionPlan:
+					err = h.Plan(ctx, req, &res)
+				case ActionPlanDestroy:
+					err = h.PlanDestroy(ctx, req, &res)
+				case ActionDestroy:
+					err = h.Destroy(ctx, req, &res)
+				default:
+					err = fmt.Errorf("TODO")
+				}
+
 				if err != nil {
 					// TODO: Wrap error
-					return
+					break
 				}
+				
+				after, ok := so.(OrchestratorMiddlewareAfter)
+				if ok {
+					logger.Debug().Msg("Executing MiddlewareAfter")
+					err = after.MiddlewareAfter(ctx, req, &res)
+				}
+				break
 			}
+		}
 
-			switch req.Action {
-			case ActionApply:
-				err = h.Apply(ctx, req, &res)
-			case ActionPlan:
-				err = h.Plan(ctx, req, &res)
-			case ActionPlanDestroy:
-				err = h.PlanDestroy(ctx, req, &res)
-			case ActionDestroy:
-				err = h.Destroy(ctx, req, &res)
-			default:
-				err = fmt.Errorf("TODO")
-			}
-
-			if err != nil {
-				logger.Error().Err(err).Msg(fmt.Sprintf("Could not perform handler action %s", req.Action))
-				// TODO: Wrap error
-				return
-			}
-			logger.Info().Msg(fmt.Sprintf("Performed %s on %s %s", req.Action, h.ApiVersion(), h.Kind()))
-
-			after, ok := so.(OrchestratorMiddlewareAfter)
-			if ok {
-				// TODO: Wrap error
-				logger.Info().Msg("Executing MiddlewareAfter")
-				err = after.MiddlewareAfter(ctx, req, &res)
-			}
-			return
+		if !match {
+			// TODO: better error?
+			err = fmt.Errorf("found no matching handler")
 		}
 	}
 
-	// TODO: better error?
-	err = fmt.Errorf("found no matching handler")
-	return
+	res.errs = errors.Join(res.errs, err)
+	return res
 }
+
+func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
+	if topic == nil {
+		return fmt.Errorf("no topic set, unable to respond")
+	}
+	
+	enc, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	result := topic.Publish(ctx, &pubsub.Message{
+		Data: enc,
+	})
+	_, err = result.Get(ctx)
+	return err
+}
+
+// -----------------------
+// Handlers
+// -----------------------
 
 type HandlerConfig struct {
 	logger *zerolog.Logger
@@ -163,25 +195,27 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 		opt(cfg)
 	}
 
-	var pLogger zerolog.Logger
+	var parentLogger zerolog.Logger
 	if cfg.logger != nil {
-		pLogger = *cfg.logger
+		parentLogger = *cfg.logger
 	} else {
-		pLogger = logging.New()
+		parentLogger = logging.New()
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
 	cache := newTopicCache(client)
-	pLogger.Info().Msg("Created a new EventHandler")
+
+	parentLogger.Debug().Msg("Created a new EventHandler")
 
 	return func(ctx context.Context, cloudEvent event.Event) error {
-		logger := pLogger.With().Logger()
-
+		logger := parentLogger.With().Logger()
+		
 		req, err := ParseEvent(cloudEvent)
 		if err != nil {
-			logger.Error().Err(err).Msg("ParseEvent failed")
+			logger.Error().Err(err).Msg("Encountered an internal error when calling ParseEvent")
 			return err
 		}
+		
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
 			return c.Int("gorch_github_user_id", req.Sender.ID).
 				Str("gorch_request_id", req.Metadata.RequestID).
@@ -189,56 +223,27 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 				Str("gorch_action", string(req.Action))
 		})
 		ctx = logger.WithContext(ctx)
-
-		logger.Info().Interface("req", req).Msg("Handling request")
-
-		result, err := HandleRequest(ctx, so, req)
-
-		// TODO:
-		// Cleanup all of this an/or split it into a new function.
-		// Preferably the altter if we are making other event handlers
-		var code ResultCode
-		var msg string
-
-		if err != nil || result.mistakes != nil {
-			if result.mistakes != nil {
-				logger.Error().Stack().Err(result.mistakes).Msg("")
-			}
-			if err != nil {
-				logger.Error().Err(err).Interface("gorch_result", result).Msg(msg)
-			}
-
-			msg = "An internal error occured"
-			code = ResultCodeError
-		} else {
-			msg = result.String()
-
-			if !result.Succeeded() {
-				code = ResultCodeFailure
-			} else if !result.HasChanges() {
-				code = ResultCodeNoop
-			} else {
-				code = ResultCodeSuccess
-			}
-		}
-
-		res := NewResponse(req.Metadata, code, msg)
-
-		logger.Info().Interface("res", res).Msg("Got response")
-
-		enc, err := json.Marshal(res)
+		logger.Info().Interface("gorch_request", req).Msg("Ready to receive and process request")		
+		
+		result := Receive(ctx, so, req)
+		err = result.errs
 		if err != nil {
-			return err
+			logger.Error().Stack().Err(err).
+				Interface("gorch_result_creations", result.creations).
+				Interface("gorch_result_updates", result.updates).
+				Interface("gorch_result_deletions", result.deletions).
+				Msg("Encountered an internal error whilst processing the request")
 		}
+
+		res := NewResponse(req.Metadata, result.Code(), result.String())
+		logger.Info().Interface("gorch_response", res).Msg("Ready to send response")
 
 		topic := cache.TopicFullID(req.ResponseTopic)
-		if topic == nil {
-			return fmt.Errorf("no topic set, cannot respond")
+		err = Respond(ctx, topic, res)
+		if err != nil {
+			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to the request")
 		}
-		pubres := topic.Publish(ctx, &pubsub.Message{
-			Data: enc,
-		})
-		_, err = pubres.Get(ctx)
+		
 		return err
 	}
 }

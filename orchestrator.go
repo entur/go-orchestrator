@@ -112,17 +112,17 @@ func NewResponse(metadata OuterMetadata, code ResultCode, msg string) Response {
 // Sub Orchestrator
 // -----------------------
 
-type ActionHandler = func(context.Context, Request, *ResponseResult) error
+type ActionHandler = func(context.Context, Request, *Result) error
 
 type ManifestHandler interface {
 	// Which ApiVersion and Kind this handler correlates with
 	ApiVersion() ApiVersion
 	Kind() Kind
 	// Actions
-	Plan(context.Context, Request, *ResponseResult) error
-	PlanDestroy(context.Context, Request, *ResponseResult) error
-	Apply(context.Context, Request, *ResponseResult) error
-	Destroy(context.Context, Request, *ResponseResult) error
+	Plan(context.Context, Request, *Result) error
+	PlanDestroy(context.Context, Request, *Result) error
+	Apply(context.Context, Request, *Result) error
+	Destroy(context.Context, Request, *Result) error
 }
 
 type Orchestrator interface {
@@ -131,17 +131,17 @@ type Orchestrator interface {
 }
 
 type OrchestratorMiddlewareBefore interface {
-	MiddlewareBefore(context.Context, Request, *ResponseResult) error
+	MiddlewareBefore(context.Context, Request, *Result) error
 }
 
 type OrchestratorMiddlewareAfter interface {
-	MiddlewareAfter(context.Context, Request, *ResponseResult) error
+	MiddlewareAfter(context.Context, Request, *Result) error
 }
 
-type ResponseResult struct {
-	lock     bool
-	mistakes error
-
+type Result struct {
+	lock bool
+	errs error
+	
 	summary   string   // Your failure or success summary.
 	success   bool     // If the action succeeded or not. A false value indicates a user error
 	creations []string // A list of resources that are planned/being created.
@@ -149,17 +149,17 @@ type ResponseResult struct {
 	deletions []string // A list of resources that are planned/being deleted.
 }
 
-func (r *ResponseResult) Succeeded() bool {
-	return r.success
-}
-
-func (r *ResponseResult) HasChanges() bool {
+func (r *Result) changes() bool {
 	return len(r.creations) > 0 || len(r.updates) > 0 && len(r.deletions) > 0
 }
 
-func (r *ResponseResult) Done(summary string, success bool) {
+func (r *Result) Errors() error {
+	return r.errs
+}
+
+func (r *Result) Done(summary string, success bool) {
 	if r.lock {
-		r.mistakes = errors.Join(r.mistakes, logging.NewStackTraceError("already done"))
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to mark an already locked result as done"))
 	} else {
 		r.lock = true
 		r.summary = summary
@@ -167,54 +167,70 @@ func (r *ResponseResult) Done(summary string, success bool) {
 	}
 }
 
-func (r *ResponseResult) Create(change ...string) {
+func (r *Result) Create(change ...string) {
 	if r.lock {
-		r.mistakes = errors.Join(r.mistakes, logging.NewStackTraceError("already done"))
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a create change to an already locked result"))
 	} else {
 		r.creations = append(r.creations, change...)
 	}
 }
 
-func (r *ResponseResult) Creations() []string {
+func (r *Result) Creations() []string {
 	creations := make([]string, len(r.creations))
 	copy(creations, r.creations)
 	return creations
 }
 
-func (r *ResponseResult) Update(change ...string) {
+func (r *Result) Update(change ...string) {
 	if r.lock {
-		r.mistakes = errors.Join(r.mistakes, logging.NewStackTraceError("already done"))
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add an update change to an already locked result"))
 	} else {
 		r.updates = append(r.updates, change...)
 	}
 }
 
-func (r *ResponseResult) Updates() []string {
+func (r *Result) Updates() []string {
 	updates := make([]string, len(r.updates))
 	copy(updates, r.updates)
 	return updates
 }
 
-func (r *ResponseResult) Delete(change ...string) {
+func (r *Result) Delete(change ...string) {
 	if r.lock {
-		r.mistakes = errors.Join(r.mistakes, logging.NewStackTraceError("already done"))
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a delete change to an already locked result"))
 	} else {
 		r.deletions = append(r.deletions, change...)
 	}
 }
 
-func (r *ResponseResult) Deletions() []string {
+func (r *Result) Deletions() []string {
 	deletions := make([]string, len(r.deletions))
 	copy(deletions, r.deletions)
 	return deletions
 }
 
-func (r *ResponseResult) String() string {
-	if !r.Succeeded() {
+func (r *Result) Code() ResultCode {
+	if r.errs != nil {
+		return ResultCodeError
+	} 
+	if !r.success {
+		return ResultCodeFailure
+	}
+	if !r.changes() {
+		return ResultCodeNoop
+	}
+	return ResultCodeSuccess
+}
+
+func (r *Result) String() string {
+	if r.errs != nil {
+		return "Internal error"
+	}
+	if !r.success {
 		return r.summary
 	}
-	if !r.HasChanges() {
-		return "No changes detected"
+	if !r.changes() {
+		return "No changes"
 	}
 
 	var builder strings.Builder
