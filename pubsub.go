@@ -3,7 +3,6 @@ package orchestrator
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 
 	"github.com/cloudevents/sdk-go/v2/event"
 )
@@ -39,13 +38,12 @@ func ParseEvent(e event.Event) (Request, error) {
 
 type MockEventOption func(*Request)
 
-func NewMockEvent[T any](manifest T, sender SenderType, action Action, options ...MockEventOption) (*event.Event, error) {
-	b, err := json.Marshal(manifest)
-	if err != nil {
-		// TODO
-		return nil, fmt.Errorf("")
-	}
+func NewMockEvent(manifest any, sender SenderType, action Action, options ...MockEventOption) (*event.Event, error) {
 
+	newManifest, err := json.Marshal(manifest)
+	if err != nil {
+		return nil, err
+	}
 	req := &Request{
 		ApiVersion: "orchestrator.entur.io/request/v1",
 		Metadata: OuterMetadata{
@@ -56,7 +54,7 @@ func NewMockEvent[T any](manifest T, sender SenderType, action Action, options .
 		},
 		Action:        action,
 		ResponseTopic: "topic",
-		Manifest:      Manifests{Old: nil, New: b},
+		Manifest:      Manifests{Old: nil, New: newManifest},
 	}
 	for _, opt := range options {
 		opt(req)

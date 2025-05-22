@@ -9,82 +9,77 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type ExampleSOManifest struct {
-	ApiVersion orchestrator.ApiVersion `json:"apiVersion"`
-	Kind       orchestrator.Kind       `json:"kind"`
-	Metadata   orchestrator.Metadata   `json:"metadata"`
-}
-
 type ExampleSO struct {
 	/* you can have some internal state here */
 	projectID string
+	handlers  []orchestrator.ManifestHandler
 }
 
 func (so *ExampleSO) ProjectID() string {
-	/* your project id */
 	return so.projectID
 }
 
-func (so *ExampleSO) Plan(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
-	return orchestrator.Result{
-		Summary: "Plan all the things",
-		Success: true,
-		Creations: []string{
-			"A thing",
-		},
-		Updates: []string{
-			"A thing",
-		},
-		Deletions: []string{
-			"A thing",
-		},
-	}, nil
+func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
+	return so.handlers
 }
 
-func (so *ExampleSO) PlanDestroy(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
-	return orchestrator.Result{}, fmt.Errorf("plandestroy not implemented")
+type ExampleSpecV1 struct {
+	Name string `json:"name"`
+}
+type ExampleKindV1 struct {
+	orchestrator.ManifestHeader
+	Spec ExampleSpecV1 `json:"spec"`
+}
+type ExampleKindV1Handler struct{}
+
+func (h *ExampleKindV1Handler) ApiVersion() orchestrator.ApiVersion {
+	return "orchestation.entur.io/example/v1"
+}
+func (h *ExampleKindV1Handler) Kind() orchestrator.Kind { return "Example" }
+
+func (so *ExampleKindV1Handler) Plan(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+	res.Create("A thing")
+	res.Update("A thing")
+	res.Delete("A thing")
+	res.Done("Plan all the things", true)
+	return nil
 }
 
-func (so *ExampleSO) Apply(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
+func (so *ExampleKindV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+	return fmt.Errorf("plandestroy not implemented")
+}
+
+func (so *ExampleKindV1Handler) Apply(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
 	if req.Sender.Type == orchestrator.SenderTypeUser {
-		client := req.Resources.IAM.ToClient()
+		client := orchestrator.NewIAMLookupClient(req.Resources.IAM.Url)
 
 		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
 		if err != nil {
-			return orchestrator.Result{}, err
+			return err
 		}
 
 		if access == false {
-			// Forbidden, so tell the user why!
-			return orchestrator.Result{
-				Summary: "You don't have access to ent-someproject-dev",
-				Success: false,
-			}, nil
+			res.Done("You don't have access to ent-someproject-dev", false)
+			return nil
 		}
 	}
-
-	return orchestrator.Result{
-		Summary: "Apply all the things",
-		Success: true,
-		Creations: []string{
-			"A thing",
-		},
-		Updates: []string{
-			"A thing",
-		},
-		Deletions: []string{
-			"A thing",
-		},
-	}, nil
+	res.Create("A thing")
+	res.Update("A thing")
+	res.Delete("A thing")
+	res.Done("Plan all the things", true)
+	return nil
 }
 
-func (so *ExampleSO) Destroy(ctx context.Context, req orchestrator.Request[ExampleSOManifest]) (orchestrator.Result, error) {
-	return orchestrator.Result{}, fmt.Errorf("destroy not implemented")
+func (so *ExampleKindV1Handler) Destroy(ctx context.Context, req orchestrator.Request, res *orchestrator.ResponseResult) error {
+	return fmt.Errorf("destroy not implemented")
 }
 
 func NewExampleSO(projectID string) *ExampleSO {
 	return &ExampleSO{
 		projectID: projectID,
+		handlers: []orchestrator.ManifestHandler{
+			&ExampleKindV1Handler{},
+		},
 	}
 }
 
@@ -98,22 +93,22 @@ func Example() {
 	writer.PartsExclude = []string{"timestamp"}
 	logger := logging.New(logging.WithWriter(writer))
 
-	// Just an example manifest, here is where you specify _your_ sub-orchestrator
-	// ApiVersion, Kind and Metadata.ID is required
-	manifest := ExampleSOManifest{
-		ApiVersion: "orcestrator.entur.io/example/v1",
-		Kind:       "Example",
-		Metadata: orchestrator.Metadata{
-			ID: "mything",
-		},
-	}
-
 	// Optional modifier of your mockevent
-	mockEventModifier := func(r *orchestrator.Request[ExampleSOManifest]) {
+	mockEventModifier := func(r *orchestrator.Request) {
 		r.Metadata.RequestID = "ExampleId"
 	}
 
 	so := NewExampleSO("mysoproject")
+	manifest := ExampleKindV1{
+		Spec: ExampleSpecV1{
+			Name: "Test Name",
+		},
+		ManifestHeader: orchestrator.ManifestHeader{
+			ApiVersion: so.handlers[0].ApiVersion(),
+			Kind:       so.handlers[0].Kind(),
+		},
+	}
+
 	handler := orchestrator.NewEventHandler(so, orchestrator.WithCustomLogger(logger))
 	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
 	err := handler(context.Background(), *event)
@@ -122,7 +117,10 @@ func Example() {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
 	// Output:
-	// INF Response ready to send gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
-	// ERR Could not respond error="no topic set, cannot respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Created a new EventHandler
+	// INF Handling request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId req={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":""}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}}
+	// INF Found handler for orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Performed plan on orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Got response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId res={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered error error="no topic set, cannot respond"
 }
