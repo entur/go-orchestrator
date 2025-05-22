@@ -91,7 +91,9 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	var header ManifestHeader
 
 	err := json.Unmarshal(req.Manifest.New, &header)
-	if err == nil {
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
+	} else {
 		match := false
 
 		for _, h := range so.Handlers() {
@@ -105,6 +107,9 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 					err = before.MiddlewareBefore(ctx, req, &result)
 					if err != nil {
 						err = fmt.Errorf("so middleware (before): %w", err)
+						break
+					}
+					if result.done {
 						break
 					}
 				}
@@ -136,10 +141,13 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 						err = fmt.Errorf("so middleware (after): %w", err)
 						break
 					}
+					if result.done {
+						break
+					}
 				}
 
-				if !result.lock {
-					err = fmt.Errorf("forgot to call .Done() in ManifestHandler %s %s %s", header.ApiVersion, header.Kind, req.Action)
+				if !result.done {
+					err = fmt.Errorf("forgot to call .Done() in handler %s %s %s", header.ApiVersion, header.Kind, req.Action)
 				}
 
 				break
@@ -149,8 +157,6 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 		if !match {
 			err = fmt.Errorf("no matching ManifestHandler for %s %s", header.ApiVersion, header.Kind)
 		}
-	} else {
-		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
 	}
 
 	result.errs = errors.Join(result.errs, err)
