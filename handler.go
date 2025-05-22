@@ -84,12 +84,10 @@ func newTopicCache(client *pubsub.Client) *topicCache {
 // Processing
 // -----------------------
 
-// NOTE:
-// Maybe there's it's better to rename this to process again, but receive / respond sound neater
 func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	logger := zerolog.Ctx(ctx)
 
-	var res Result
+	var result Result
 	var header ManifestHeader
 
 	err := json.Unmarshal(req.Manifest.New, &header)
@@ -98,55 +96,65 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 
 		for _, h := range so.Handlers() {
 			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
-				logger.Debug().Msgf("Found handler for %s %s", h.ApiVersion(), h.Kind())
+				logger.Debug().Msgf("Found ManifestHandler %s %s", header.ApiVersion, header.Kind)
 				match = true
 
 				before, ok := so.(OrchestratorMiddlewareBefore)
 				if ok {
-					logger.Debug().Msg("Executing MiddlewareBefore")
-					err = before.MiddlewareBefore(ctx, req, &res)
+					logger.Debug().Msg("Executing MiddlewareBefore handler")
+					err = before.MiddlewareBefore(ctx, req, &result)
 					if err != nil {
-						// TODO: Wrap error
+						err = fmt.Errorf("so middleware (before): %w", err)
 						break
 					}
 				}
 
-				logger.Debug().Msgf("Executing %s on %s %s", req.Action, h.ApiVersion(), h.Kind())
+				logger.Debug().Msgf("Executing ManifestHandler %s %s %s", header.ApiVersion, header.Kind, req.Action)
 				switch req.Action {
 				case ActionApply:
-					err = h.Apply(ctx, req, &res)
+					err = h.Apply(ctx, req, &result)
 				case ActionPlan:
-					err = h.Plan(ctx, req, &res)
+					err = h.Plan(ctx, req, &result)
 				case ActionPlanDestroy:
-					err = h.PlanDestroy(ctx, req, &res)
+					err = h.PlanDestroy(ctx, req, &result)
 				case ActionDestroy:
-					err = h.Destroy(ctx, req, &res)
+					err = h.Destroy(ctx, req, &result)
 				default:
-					err = fmt.Errorf("TODO")
+					err = fmt.Errorf("invalid action")
 				}
 
 				if err != nil {
-					// TODO: Wrap error
+					err = fmt.Errorf("ManifestHandler %s %s %s: %w", header.ApiVersion, header.Kind, req.Action, err)
 					break
 				}
 
 				after, ok := so.(OrchestratorMiddlewareAfter)
 				if ok {
-					logger.Debug().Msg("Executing MiddlewareAfter")
-					err = after.MiddlewareAfter(ctx, req, &res)
+					logger.Debug().Msg("Executing MiddlewareAfter handler")
+					err = after.MiddlewareAfter(ctx, req, &result)
+					if err != nil {
+						err = fmt.Errorf("so middleware (after): %w", err)
+						break
+					}
 				}
+
+				if !result.lock {
+					err = fmt.Errorf("forgot to call .Done() in ManifestHandler %s %s %s", header.ApiVersion, header.Kind, req.Action)
+				}
+
 				break
 			}
 		}
 
 		if !match {
-			// TODO: better error?
-			err = fmt.Errorf("found no matching handler")
+			err = fmt.Errorf("no matching ManifestHandler for %s %s", header.ApiVersion, header.Kind)
 		}
+	} else {
+		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
 	}
 
-	res.errs = errors.Join(res.errs, err)
-	return res
+	result.errs = errors.Join(result.errs, err)
+	return result
 }
 
 func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
@@ -227,7 +235,7 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 				Interface("gorch_result_creations", result.creations).
 				Interface("gorch_result_updates", result.updates).
 				Interface("gorch_result_deletions", result.deletions).
-				Msg("Encountered an internal error whilst processing the request")
+				Msg("Encountered an internal error whilst processing request")
 		}
 
 		res := NewResponse(req.Metadata, result.Code(), result.String())
@@ -236,7 +244,7 @@ func NewEventHandler(so Orchestrator, options ...HandlerOption) EventHandler {
 		topic := cache.TopicFullID(req.ResponseTopic)
 		err = Respond(ctx, topic, res)
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to the request")
+			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
 		}
 
 		return err
