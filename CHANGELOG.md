@@ -1,27 +1,24 @@
 # Changelog
 
-## [1.2.3](https://github.com/entur/go-orchestrator/compare/v1.2.2...v1.2.3) (2025-05-21)
-
-
-### Bug Fixes
-
-* **refactor:** Miscellaneous changes relating to docs and function names ([#19](https://github.com/entur/go-orchestrator/issues/19)) ([3e9c7b0](https://github.com/entur/go-orchestrator/commit/3e9c7b0f41298cada237593d662e469eaefaf7c8))
-
-## [1.2.2](https://github.com/entur/go-orchestrator/compare/v1.2.1...v1.2.2) (2025-05-20)
-
+## [0.2.3](https://github.com/entur/go-orchestrator/compare/v1.2.2...v1.2.3) (2025-05-21)
 
 ### Bug Fixes
 
-* options for mock event ([#16](https://github.com/entur/go-orchestrator/issues/16)) ([765a668](https://github.com/entur/go-orchestrator/commit/765a6687f51223ea3d080ddcb5c17521c3534a98))
+- **refactor:** Miscellaneous changes relating to docs and function names ([#19](https://github.com/entur/go-orchestrator/issues/19)) ([3e9c7b0](https://github.com/entur/go-orchestrator/commit/3e9c7b0f41298cada237593d662e469eaefaf7c8))
 
-## [1.2.1](https://github.com/entur/go-orchestrator/compare/v1.2.0...v1.2.1) (2025-05-19)
-
+## [0.2.2](https://github.com/entur/go-orchestrator/compare/v1.2.1...v1.2.2) (2025-05-20)
 
 ### Bug Fixes
 
-* requestId not request_id ([#12](https://github.com/entur/go-orchestrator/issues/12)) ([58a6ee7](https://github.com/entur/go-orchestrator/commit/58a6ee73b32e5371e1a214ea0cdaafaf61ddb70b))
+- options for mock event ([#16](https://github.com/entur/go-orchestrator/issues/16)) ([765a668](https://github.com/entur/go-orchestrator/commit/765a6687f51223ea3d080ddcb5c17521c3534a98))
 
-## [1.2.0](https://github.com/entur/go-orchestrator/compare/v2.0.0...v1.2.0) (2025-05-16)
+## [0.2.1](https://github.com/entur/go-orchestrator/compare/v1.2.0...v1.2.1) (2025-05-19)
+
+### Bug Fixes
+
+- requestId not request_id ([#12](https://github.com/entur/go-orchestrator/issues/12)) ([58a6ee7](https://github.com/entur/go-orchestrator/commit/58a6ee73b32e5371e1a214ea0cdaafaf61ddb70b))
+
+## [0.2.0](https://github.com/entur/go-orchestrator/compare/v2.0.0...v1.2.0) (2025-05-16)
 
 ### Features
 
@@ -48,7 +45,7 @@
 
 - release 1.2.0 ([a637238](https://github.com/entur/go-orchestrator/commit/a6372385be9d8a61ff2045f75b24b03b0f737863))
 
-## [1.1.0](https://github.com/entur/go-orchestrator/compare/v1.0.0...v1.1.0) (2025-05-14)
+## [0.1.0](https://github.com/entur/go-orchestrator/compare/v1.0.0...v1.1.0) (2025-05-14)
 
 ### Features
 
