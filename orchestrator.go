@@ -5,9 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/entur/go-logging"
+	"github.com/rs/zerolog"
 )
 
 // -----------------------
@@ -268,4 +271,104 @@ func (r *Result) String() string {
 	}
 
 	return builder.String()
+}
+
+// -----------------------
+// Processing
+// -----------------------
+
+func Receive(ctx context.Context, so Orchestrator, req Request) Result {
+	logger := zerolog.Ctx(ctx)
+
+	var result Result
+	var header ManifestHeader
+
+	err := json.Unmarshal(req.Manifest.New, &header)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
+	} else {
+		match := false
+
+		for _, h := range so.Handlers() {
+			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
+				logger.Debug().Msgf("Found ManifestHandler %s %s", header.ApiVersion, header.Kind)
+				match = true
+
+				before, ok := so.(OrchestratorMiddlewareBefore)
+				if ok {
+					logger.Debug().Msg("Executing MiddlewareBefore handler")
+					err = before.MiddlewareBefore(ctx, req, &result)
+					if err != nil {
+						err = fmt.Errorf("so middleware (before): %w", err)
+						break
+					}
+					if result.done {
+						break
+					}
+				}
+
+				logger.Debug().Msgf("Executing ManifestHandler %s %s %s", header.ApiVersion, header.Kind, req.Action)
+				switch req.Action {
+				case ActionApply:
+					err = h.Apply(ctx, req, &result)
+				case ActionPlan:
+					err = h.Plan(ctx, req, &result)
+				case ActionPlanDestroy:
+					err = h.PlanDestroy(ctx, req, &result)
+				case ActionDestroy:
+					err = h.Destroy(ctx, req, &result)
+				default:
+					err = fmt.Errorf("invalid action")
+				}
+
+				if err != nil {
+					err = fmt.Errorf("ManifestHandler %s %s %s: %w", header.ApiVersion, header.Kind, req.Action, err)
+					break
+				}
+
+				after, ok := so.(OrchestratorMiddlewareAfter)
+				if ok {
+					logger.Debug().Msg("Executing MiddlewareAfter handler")
+					err = after.MiddlewareAfter(ctx, req, &result)
+					if err != nil {
+						err = fmt.Errorf("so middleware (after): %w", err)
+						break
+					}
+					if result.done {
+						break
+					}
+				}
+
+				if !result.done {
+					err = fmt.Errorf("forgot to call .Done() in handler %s %s %s", header.ApiVersion, header.Kind, req.Action)
+				}
+
+				break
+			}
+		}
+
+		if !match {
+			err = fmt.Errorf("no matching ManifestHandler for %s %s", header.ApiVersion, header.Kind)
+		}
+	}
+
+	result.errs = errors.Join(result.errs, err)
+	return result
+}
+
+func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
+	if topic == nil {
+		return fmt.Errorf("no topic set, unable to respond")
+	}
+
+	enc, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	result := topic.Publish(ctx, &pubsub.Message{
+		Data: enc,
+	})
+	_, err = result.Get(ctx)
+	return err
 }

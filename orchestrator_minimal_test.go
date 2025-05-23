@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	orchestrator "github.com/entur/go-orchestrator"
+	"github.com/entur/go-orchestrator/events"
 )
 
 type MinimalSO struct {
@@ -91,9 +92,9 @@ func ExampleMinimalSO() {
 		},
 	}
 
-	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
+	event, _ := events.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
 
-	handler := orchestrator.NewEventHandler(so)
+	handler := events.NewEventHandler(so)
 
 	err := handler(context.Background(), *event)
 
