@@ -218,7 +218,7 @@ func (r *Result) Deletions() []string {
 }
 
 func (r *Result) Code() ResultCode {
-	if r.errs != nil {
+	if r.errs != nil || !r.done {
 		return ResultCodeError
 	}
 	if !r.success {
@@ -231,7 +231,7 @@ func (r *Result) Code() ResultCode {
 }
 
 func (r *Result) String() string {
-	if r.errs != nil {
+	if r.errs != nil || !r.done {
 		return "Internal error"
 	}
 	if !r.success {
