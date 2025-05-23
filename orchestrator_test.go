@@ -117,10 +117,23 @@ func Example() {
 		},
 	}
 
+	iamServer := orchestrator.NewMockIAMLookupServer(
+		orchestrator.WithPort(8001),
+		orchestrator.WithUserProjectRoles(
+			orchestrator.MockUserEmail,
+			"ent-someproject-dev",
+			[]string{"your_so_role"},
+		),
+	)
+	iamResource, _ := iamServer.Serve()
+	defer iamServer.Close()
+
 	// Optional modifier of your mockevent
 	mockEventModifier := func(r *orchestrator.Request) {
 		r.Metadata.RequestID = "ExampleId"
+		r.Resources.IAM = iamResource
 	}
+
 	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
 
 	handler := orchestrator.NewEventHandler(so, orchestrator.WithCustomLogger(logger))
@@ -133,13 +146,15 @@ func Example() {
 	}
 	// Output:
 	// DBG Created a new EventHandler
-	// INF Ready to receive and process request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"example.com"}},"responseTopic":"topic","sender":{"githubEmail":"","githubId":0,"type":"user"}} gorch_request_id=ExampleId
+	// INF Ready to receive and process request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
 	// DBG Found ManifestHandler orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing MiddlewareBefore handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
 	// #####
-	// ERR Encountered an internal error whilst processing request error="so middleware (before): no client passed to request" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_result_creations=null gorch_result_deletions=null gorch_result_updates=null
-	// INF Ready to send response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"SW50ZXJuYWwgZXJyb3I=","result":"error"}
+	// DBG Executing ManifestHandler orchestation.entur.io/example/v1 Example plan gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Executing MiddlewareAfter handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// After it's done
+	// INF Ready to send response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// ERR Encountered error error="no topic set, unable to respond"
 }
