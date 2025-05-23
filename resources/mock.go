@@ -116,7 +116,7 @@ func (s *MockIAMLookupServer) hEntraIDUserGroups(w http.ResponseWriter, req *htt
 // Non-blocking
 func (s *MockIAMLookupServer) Serve() (string, error) {
 	if s.up {
-		return "", fmt.Errorf("TODO")
+		return "", fmt.Errorf("server is already running")
 	}
 
 	portStr := ":0"
