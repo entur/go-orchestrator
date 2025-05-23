@@ -6,6 +6,8 @@ import (
 
 	"github.com/entur/go-logging"
 	orchestrator "github.com/entur/go-orchestrator"
+	"github.com/entur/go-orchestrator/events"
+	"github.com/entur/go-orchestrator/resources"
 	"github.com/rs/zerolog"
 )
 
@@ -27,7 +29,7 @@ func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Reques
 	fmt.Println("Before it begins")
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		fmt.Println("#####")
-		client := orchestrator.NewIAMLookupClient(req.Resources.IAM.Url)
+		client := resources.NewIAMLookupClient(req.Resources.IAM.Url)
 
 		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
 		if err != nil {
@@ -117,26 +119,26 @@ func Example() {
 		},
 	}
 
-	iamServer := orchestrator.NewMockIAMLookupServer(
-		orchestrator.WithPort(8001),
-		orchestrator.WithUserProjectRoles(
-			orchestrator.MockUserEmail,
+	iamServer := resources.NewMockIAMLookupServer(
+		resources.WithPort(8001),
+		resources.WithUserProjectRoles(
+			events.MockUserEmail,
 			"ent-someproject-dev",
 			[]string{"your_so_role"},
 		),
 	)
-	iamResource, _ := iamServer.Serve()
+	url, _ := iamServer.Serve()
 	defer iamServer.Close()
 
 	// Optional modifier of your mockevent
 	mockEventModifier := func(r *orchestrator.Request) {
 		r.Metadata.RequestID = "ExampleId"
-		r.Resources.IAM = iamResource
+		r.Resources.IAM.Url = url
 	}
 
-	event, _ := orchestrator.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
+	event, _ := events.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
 
-	handler := orchestrator.NewEventHandler(so, orchestrator.WithCustomLogger(logger))
+	handler := events.NewEventHandler(so, events.WithCustomLogger(logger))
 	// functions.CloudEvent("OrchestratorEvent", handler)
 
 	err := handler(context.Background(), *event)

@@ -1,64 +1,36 @@
-package orchestrator
+package events
 
 import (
 	"encoding/base64"
 	"encoding/json"
 
 	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/entur/go-orchestrator"
 )
-
-type PubSubMessageAttributes struct{}
-
-type PubSubMessage struct {
-	ID          string                  `json:"messageId"`
-	PublishTime string                  `json:"publishTime"`
-	Attributes  PubSubMessageAttributes `json:"attributes"`
-	Data        []byte                  `json:"data"`
-}
-
-type EventData struct {
-	Subscription string
-	Message      PubSubMessage
-}
-
-func ParseEvent(e event.Event) (Request, error) {
-	var req Request
-	var data EventData
-	err := e.DataAs(&data)
-	if err != nil {
-		return req, err
-	}
-
-	err = json.Unmarshal(data.Message.Data, &req)
-	if err != nil {
-		return req, err
-	}
-	return req, nil
-}
 
 const MockUserEmail = "mockuser@entur.io"
 
-type MockEventOption func(*Request)
+type MockEventOption func(*orchestrator.Request)
 
-func NewMockEvent(manifest any, sender SenderType, action Action, options ...MockEventOption) (*event.Event, error) {
+func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestrator.Action, options ...MockEventOption) (*event.Event, error) {
 	newManifest, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err
 	}
 
-	req := &Request{
+	req := &orchestrator.Request{
 		ApiVersion: "orchestrator.entur.io/request/v1",
-		Metadata: OuterMetadata{
+		Metadata: orchestrator.OuterMetadata{
 			RequestID: "mockid",
 		},
-		Sender: Sender{
+		Sender: orchestrator.Sender{
 			Type: sender,
 		},
 		Action:        action,
 		ResponseTopic: "topic",
-		Manifest:      Manifests{Old: nil, New: newManifest},
+		Manifest:      orchestrator.Manifests{Old: nil, New: newManifest},
 	}
-	if sender == SenderTypeUser {
+	if sender == orchestrator.SenderTypeUser {
 		req.Sender.Email = MockUserEmail
 	}
 
