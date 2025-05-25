@@ -7,7 +7,7 @@ Typical dependencies
 ```go
 import (
 	"github.com/entur/go-logging"
-	orchestrator "github.com/entur/go-orchestrator"
+	"github.com/entur/go-orchestrator"
 )
 ```
 

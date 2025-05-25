@@ -40,7 +40,7 @@ func enforceJSON(next http.Handler) http.Handler {
 type MockIAMLookupServer struct {
 	server           *http.Server
 	port             int
-	up               bool
+	url              string
 	appIDProjects    map[string][]string
 	userProjectRoles map[string]map[string][]string
 	userGroups       map[string][]string
@@ -50,7 +50,7 @@ func (s *MockIAMLookupServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Re
 	var reqBody GCPAppProjectsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (s *MockIAMLookupServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Re
 	projectIDS, ok := s.appIDProjects[reqBody.AppID]
 	resBody.ProjectIDS = projectIDS
 	if !ok {
-		http.Error(w, "Not found", http.StatusNotFound)
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 
@@ -71,12 +71,12 @@ func (s *MockIAMLookupServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, r
 	var reqBody GCPUserAccessRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	if !strings.HasPrefix(reqBody.Resource, "projects/") {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 	reqBody.Resource = strings.TrimPrefix(reqBody.Resource, "projects/")
@@ -102,7 +102,7 @@ func (s *MockIAMLookupServer) hEntraIDUserGroups(w http.ResponseWriter, req *htt
 	var reqBody EntraIDUserGroupsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
@@ -113,31 +113,37 @@ func (s *MockIAMLookupServer) hEntraIDUserGroups(w http.ResponseWriter, req *htt
 	json.NewEncoder(w).Encode(resBody)
 }
 
-// Non-blocking
-func (s *MockIAMLookupServer) Serve() (string, error) {
-	if s.up {
-		return "", fmt.Errorf("server is already running")
-	}
-
-	portStr := ":0"
-	if s.port > 0 {
-		portStr = fmt.Sprintf(":%d", s.port)
-	}
-
-	l, err := net.Listen("tcp", portStr)
-	if err != nil {
-		return "", err
-	}
-
-	go s.server.Serve(l)
-
-	s.port = l.Addr().(*net.TCPAddr).Port
-	return fmt.Sprintf("http://localhost:%d", s.port), nil
+func (s *MockIAMLookupServer) Url() string {
+	return s.url
 }
 
-func (s *MockIAMLookupServer) Close() error {
+// Non-blocking
+func (s *MockIAMLookupServer) Start() error {
+	if s.url != "" {
+		return fmt.Errorf("server is already running")
+	}
+
+	var port string
+	if s.port == 0 {
+		port = ":0"
+	} else {
+		port = fmt.Sprintf(":%d", s.port)
+	}
+
+	l, err := net.Listen("tcp", port)
+	if err != nil {
+		return err
+	}
+
+	s.url = fmt.Sprintf("http://localhost:%d", l.Addr().(*net.TCPAddr).Port)
+	go s.server.Serve(l)
+
+	return nil
+}
+
+func (s *MockIAMLookupServer) Stop() error {
 	err := s.server.Close()
-	s.up = false
+	s.url = ""
 	return err
 }
 
@@ -173,15 +179,19 @@ func WithUserGroups(email string, groups []string) MockIAMLookupServerOption {
 	}
 }
 
-func NewMockIAMLookupServer(options ...MockIAMLookupServerOption) *MockIAMLookupServer {
+func NewMockIAMLookupServer(opts ...MockIAMLookupServerOption) (*MockIAMLookupServer, error) {
 	s := &MockIAMLookupServer{
 		appIDProjects:    map[string][]string{},
 		userProjectRoles: map[string]map[string][]string{},
 		userGroups:       map[string][]string{},
 	}
 
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(s)
+	}
+
+	if s.port < 0 {
+		return nil, fmt.Errorf("the assigned port must be a positive integer")
 	}
 
 	mux := http.NewServeMux()
@@ -193,5 +203,5 @@ func NewMockIAMLookupServer(options ...MockIAMLookupServerOption) *MockIAMLookup
 		Handler: mux,
 	}
 
-	return s
+	return s, nil
 }

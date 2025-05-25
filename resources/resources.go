@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 
+	"github.com/rs/zerolog"
 	"google.golang.org/api/idtoken"
 )
 
@@ -148,16 +151,30 @@ func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string)
 	return resBody.Groups, nil
 }
 
-type IAMLookupClientOptions = idtoken.ClientOption
+type IAMLookupClientOption = idtoken.ClientOption
 
-func NewIAMLookupClient(url string, options ...IAMLookupClientOptions) IAMLookupClient {
-	client, err := idtoken.NewClient(context.Background(), url, options...)
-	if err != nil && err.Error() == "idtoken: unsupported credentials type" {
-		client = http.DefaultClient
+func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClientOption) (*IAMLookupClient, error) {
+	logger := zerolog.Ctx(ctx)
+
+	client, err := idtoken.NewClient(ctx, url, opts...)
+	if err != nil {
+		if err.Error() != "idtoken: unsupported credentials type" {
+			return nil, err
+		}
+
+		logger.Debug().Msg("unable to discover idtoken credentials, defaulting to http.Client for IAMLookup")
+		client = &http.Client{
+			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout: 5 * time.Second,
+				}).Dial,
+			},
+		}
 	}
 
-	return IAMLookupClient{
+	return &IAMLookupClient{
 		client: client,
 		url:    url,
-	}
+	}, nil
 }

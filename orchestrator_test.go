@@ -2,14 +2,68 @@ package orchestrator_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/entur/go-logging"
-	orchestrator "github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/events"
+	"github.com/entur/go-orchestrator"
+	"github.com/entur/go-orchestrator/event"
 	"github.com/entur/go-orchestrator/resources"
 	"github.com/rs/zerolog"
 )
+
+type ExampleSpecV1 struct {
+	Name string `json:"name"`
+}
+type ExampleManifestV1 struct {
+	orchestrator.ManifestHeader
+	Spec ExampleSpecV1 `json:"spec"`
+}
+
+type ExampleManifestV1Handler struct {
+	/* you can have some internal state here */
+}
+
+func (h *ExampleManifestV1Handler) ApiVersion() orchestrator.ApiVersion {
+	return "orchestation.entur.io/example/v1"
+}
+func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind { return "Example" }
+
+func (so *ExampleManifestV1Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	var manifest ExampleManifestV1
+	err := json.Unmarshal(req.Manifest.New, &manifest)
+	if err != nil {
+		return err
+	}
+
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Plan all the things", true)
+	return nil
+}
+
+func (so *ExampleManifestV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	return fmt.Errorf("plandestroy not implemented")
+}
+
+func (so *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	var manifest ExampleManifestV1
+	err := json.Unmarshal(req.Manifest.New, &manifest)
+	if err != nil {
+		return err
+	}
+
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Plan all the things", true)
+	return nil
+}
+
+func (so *ExampleManifestV1Handler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	return fmt.Errorf("destroy not implemented")
+}
 
 type ExampleSO struct {
 	/* you can have some internal state here */
@@ -29,7 +83,10 @@ func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Reques
 	fmt.Println("Before it begins")
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		fmt.Println("#####")
-		client := resources.NewIAMLookupClient(req.Resources.IAM.Url)
+		client, err := resources.NewIAMLookupClient(ctx, req.Resources.IAM.Url)
+		if err != nil {
+			return err
+		}
 
 		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
 		if err != nil {
@@ -49,50 +106,11 @@ func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, 
 	return nil
 }
 
-type ExampleSpecV1 struct {
-	Name string `json:"name"`
-}
-type ExampleKindV1 struct {
-	orchestrator.ManifestHeader
-	Spec ExampleSpecV1 `json:"spec"`
-}
-
-type ExampleKindV1Handler struct{}
-
-func (h *ExampleKindV1Handler) ApiVersion() orchestrator.ApiVersion {
-	return "orchestation.entur.io/example/v1"
-}
-func (h *ExampleKindV1Handler) Kind() orchestrator.Kind { return "Example" }
-
-func (so *ExampleKindV1Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	r.Create("A thing")
-	r.Update("A thing")
-	r.Delete("A thing")
-	r.Done("Plan all the things", true)
-	return nil
-}
-
-func (so *ExampleKindV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	return fmt.Errorf("plandestroy not implemented")
-}
-
-func (so *ExampleKindV1Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	r.Create("A thing")
-	r.Update("A thing")
-	r.Delete("A thing")
-	r.Done("Plan all the things", true)
-	return nil
-}
-
-func (so *ExampleKindV1Handler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	return fmt.Errorf("destroy not implemented")
-}
-
 func NewExampleSO(projectID string) *ExampleSO {
 	return &ExampleSO{
 		projectID: projectID,
 		handlers: []orchestrator.ManifestHandler{
-			&ExampleKindV1Handler{},
+			&ExampleManifestV1Handler{},
 		},
 	}
 }
@@ -109,7 +127,7 @@ func Example() {
 
 	so := NewExampleSO("mysoproject")
 
-	manifest := ExampleKindV1{
+	manifest := ExampleManifestV1{
 		Spec: ExampleSpecV1{
 			Name: "Test Name",
 		},
@@ -119,44 +137,45 @@ func Example() {
 		},
 	}
 
-	iamServer := resources.NewMockIAMLookupServer(
+	iamServer, _ := resources.NewMockIAMLookupServer(
 		resources.WithPort(8001),
 		resources.WithUserProjectRoles(
-			events.MockUserEmail,
+			event.MockUserEmail,
 			"ent-someproject-dev",
 			[]string{"your_so_role"},
 		),
 	)
-	url, _ := iamServer.Serve()
-	defer iamServer.Close()
+
+	iamServer.Start()
+	defer iamServer.Stop()
 
 	// Optional modifier of your mockevent
 	mockEventModifier := func(r *orchestrator.Request) {
 		r.Metadata.RequestID = "ExampleId"
-		r.Resources.IAM.Url = url
+		r.Resources.IAM.Url = iamServer.Url()
 	}
 
-	event, _ := events.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
-
-	handler := events.NewEventHandler(so, events.WithCustomLogger(logger))
+	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
+	handler := event.NewEventHandler(so, event.WithCustomLogger(logger))
 	// functions.CloudEvent("OrchestratorEvent", handler)
 
-	err := handler(context.Background(), *event)
+	err := handler(context.Background(), *e)
 
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
 	// Output:
 	// DBG Created a new EventHandler
-	// INF Ready to receive and process request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
+	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
 	// DBG Found ManifestHandler orchestation.entur.io/example/v1 Example gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing MiddlewareBefore handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
 	// #####
+	// DBG unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler orchestation.entur.io/example/v1 Example plan gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing MiddlewareAfter handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// After it's done
-	// INF Ready to send response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
+	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// ERR Encountered error error="no topic set, unable to respond"
 }

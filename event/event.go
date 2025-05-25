@@ -1,4 +1,4 @@
-package events
+package event
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/cloudevents/sdk-go/v2/event"
+	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
 	"github.com/rs/zerolog"
@@ -20,23 +20,6 @@ type topicCache struct {
 	mu     sync.Mutex
 	client *pubsub.Client
 	topics map[string]*pubsub.Topic
-}
-
-func (c *topicCache) Topics() []*pubsub.Topic {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	var topics []*pubsub.Topic
-
-	num := len(c.topics)
-	if num > 0 {
-		topics = make([]*pubsub.Topic, 0, num)
-		for _, topic := range c.topics {
-			topics = append(topics, topic)
-		}
-	}
-
-	return topics
 }
 
 func (c *topicCache) Topic(projectID string, topicID string) *pubsub.Topic {
@@ -93,11 +76,11 @@ func WithCustomLogger(logger zerolog.Logger) HandlerOption {
 	}
 }
 
-type EventHandler func(context.Context, event.Event) error
+type EventHandler func(context.Context, cloudevent.Event) error
 
-func NewEventHandler(so orchestrator.Orchestrator, options ...HandlerOption) EventHandler {
+func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventHandler {
 	cfg := &HandlerConfig{}
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(cfg)
 	}
 
@@ -112,11 +95,10 @@ func NewEventHandler(so orchestrator.Orchestrator, options ...HandlerOption) Eve
 	cache := newTopicCache(client)
 
 	parentLogger.Debug().Msg("Created a new EventHandler")
-
-	return func(ctx context.Context, cloudEvent event.Event) error {
+	return func(ctx context.Context, e cloudevent.Event) error {
 		logger := parentLogger.With().Logger()
 
-		req, err := ParseEvent(cloudEvent)
+		req, err := ParseEvent(e)
 		if err != nil {
 			logger.Error().Err(err).Msg("Encountered an internal error when calling ParseEvent")
 			return err
@@ -129,10 +111,9 @@ func NewEventHandler(so orchestrator.Orchestrator, options ...HandlerOption) Eve
 				Str("gorch_action", string(req.Action))
 		})
 		ctx = logger.WithContext(ctx)
-		logger.Info().Interface("gorch_request", req).Msg("Ready to receive and process request")
 
-		result := orchestrator.Receive(ctx, so, req)
-		err = result.Errors()
+		result := orchestrator.Receive(ctx, so, *req)
+		err = result.AccumulatedError()
 		if err != nil {
 			logger.Error().Stack().Err(err).
 				Interface("gorch_result_creations", result.Creations()).
@@ -142,14 +123,12 @@ func NewEventHandler(so orchestrator.Orchestrator, options ...HandlerOption) Eve
 		}
 
 		res := orchestrator.NewResponse(req.Metadata, result.Code(), result.String())
-		logger.Info().Interface("gorch_response", res).Msg("Ready to send response")
-
 		topic := cache.TopicFullID(req.ResponseTopic)
+
 		err = orchestrator.Respond(ctx, topic, res)
 		if err != nil {
 			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
 		}
-
 		return err
 	}
 }

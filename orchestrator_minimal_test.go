@@ -2,11 +2,72 @@ package orchestrator_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	orchestrator "github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/events"
+	"github.com/entur/go-orchestrator"
+	"github.com/entur/go-orchestrator/event"
 )
+
+type MinimalSpec struct {
+	Name string `json:"name"`
+}
+
+// apiVersion: orchestrator.entur.io/example/v1
+// kind: Example
+// spec: { name: Some Name }
+type MinimalManifest struct {
+	orchestrator.ManifestHeader
+	Spec MinimalSpec `json:"spec"`
+}
+
+type MinimalHandler struct {
+	/* you can have some internal state here */
+}
+
+func (h *MinimalHandler) ApiVersion() orchestrator.ApiVersion {
+	return "orchestrator.entur.io/example/v1"
+}
+
+func (h *MinimalHandler) Kind() orchestrator.Kind {
+	return "Example"
+}
+
+func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	var manifest MinimalManifest
+	err := json.Unmarshal(req.Manifest.New, &manifest)
+	if err != nil {
+		return err
+	}
+
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Plan all the things", true)
+	return nil
+}
+
+func (so *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	return fmt.Errorf("plandestroy not implemented")
+}
+
+func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	var manifest MinimalManifest
+	err := json.Unmarshal(req.Manifest.New, &manifest)
+	if err != nil {
+		return err
+	}
+
+	r.Create("A thing")
+	r.Update("A thing")
+	r.Delete("A thing")
+	r.Done("Applied all the things", true)
+	return nil
+}
+
+func (so *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	return fmt.Errorf("destroy not implemented")
+}
 
 type MinimalSO struct {
 	projectID string
@@ -21,50 +82,6 @@ func (so *MinimalSO) Handlers() []orchestrator.ManifestHandler {
 	return so.handlers
 }
 
-type MinimalSpec struct {
-	Name string `json:"name"`
-}
-
-// apiVersion: orchestrator.entur.io/example/v1
-// kind: Example
-// spec: { name: Some Name }
-type MinimalKind struct {
-	orchestrator.ManifestHeader
-	Spec MinimalSpec `json:"spec"`
-}
-
-type MinimalHandler struct{}
-
-func (h *MinimalHandler) ApiVersion() orchestrator.ApiVersion {
-	return "orchestrator.entur.io/example/v1"
-}
-
-func (h *MinimalHandler) Kind() orchestrator.Kind { return "Example" }
-
-func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	r.Create("A thing")
-	r.Update("A thing")
-	r.Delete("A thing")
-	r.Done("Plan all the things", true)
-	return nil
-}
-
-func (so *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	return fmt.Errorf("plandestroy not implemented")
-}
-
-func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	r.Create("A thing")
-	r.Update("A thing")
-	r.Delete("A thing")
-	r.Done("Applied all the things", true)
-	return nil
-}
-
-func (so *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	return fmt.Errorf("destroy not implemented")
-}
-
 func NewMinimalSO(projectID string) *MinimalSO {
 	return &MinimalSO{
 		projectID: projectID,
@@ -74,15 +91,15 @@ func NewMinimalSO(projectID string) *MinimalSO {
 	}
 }
 
-// func init() {
-// handler := orchestrator.NewEventHandler(so)
-// functions.CloudEvent("OrchestratorEvent", orchestrator.NewEventHandler(so))
-// }
+//	func init() {
+//	    handler := orchestrator.NewEventHandler(so)
+//	    functions.CloudEvent("OrchestratorEvent", handler)
+//	}
 func ExampleMinimalSO() {
 
 	so := NewMinimalSO("mysoproject")
 
-	manifest := MinimalKind{
+	manifest := MinimalManifest{
 		Spec: MinimalSpec{
 			Name: "Test Name",
 		},
@@ -92,11 +109,10 @@ func ExampleMinimalSO() {
 		},
 	}
 
-	event, _ := events.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
+	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
+	handler := event.NewEventHandler(so)
 
-	handler := events.NewEventHandler(so)
-
-	err := handler(context.Background(), *event)
+	err := handler(context.Background(), *e)
 
 	if err != nil {
 		fmt.Println(err)

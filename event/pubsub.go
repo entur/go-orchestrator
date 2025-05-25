@@ -1,9 +1,9 @@
-package events
+package event
 
 import (
 	"encoding/json"
 
-	"github.com/cloudevents/sdk-go/v2/event"
+	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/entur/go-orchestrator"
 )
 
@@ -16,22 +16,23 @@ type PubSubMessage struct {
 	Data        []byte                  `json:"data"`
 }
 
-type EventData struct {
+type CloudEventData struct {
 	Subscription string
 	Message      PubSubMessage
 }
 
-func ParseEvent(e event.Event) (orchestrator.Request, error) {
-	var req orchestrator.Request
-	var data EventData
+func ParseEvent(e cloudevent.Event) (*orchestrator.Request, error) {
+	var data CloudEventData
 	err := e.DataAs(&data)
 	if err != nil {
-		return req, err
+		return nil, err
 	}
 
+	var req orchestrator.Request
 	err = json.Unmarshal(data.Message.Data, &req)
 	if err != nil {
-		return req, err
+		return nil, err
 	}
-	return req, nil
+
+	return &req, nil
 }

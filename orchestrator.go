@@ -28,7 +28,7 @@ type OuterMetadata struct {
 type ResultCode string
 
 const (
-	ResultCodeSuccess ResultCode = "success" // Sub-Orchestrator succeded in processing the action
+	ResultCodeSuccess ResultCode = "success" // Sub-Orchestrator succeeded in processing the action
 	ResultCodeFailure ResultCode = "failure" // Sub-Orchestrator detected a user failure when processing the action
 	ResultCodeNoop    ResultCode = "noop"    // Sub-Orchestrator detected no changes after processing the action
 	ResultCodeError   ResultCode = "error"   // Sub-Orchestrator experienced an internal error when processing the action
@@ -134,8 +134,8 @@ type ManifestHandler interface {
 }
 
 type Orchestrator interface {
-	ProjectID() string
-	Handlers() []ManifestHandler
+	ProjectID() string           // The project this orchestrator is running in
+	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 
 type OrchestratorMiddlewareBefore interface {
@@ -147,21 +147,16 @@ type OrchestratorMiddlewareAfter interface {
 }
 
 type Result struct {
-	done bool
-	errs error
-
-	summary   string   // Your failure or success summary.
+	done      bool     // If the result has been marked as done
+	errs      error    // The accumulated errors for this result
+	summary   string   // Failure or Success summary
 	success   bool     // If the action succeeded or not. A false value indicates a user error
 	creations []string // A list of resources that are planned/being created.
 	updates   []string // A list of resources that are planned/being updated.
 	deletions []string // A list of resources that are planned/being deleted.
 }
 
-func (r *Result) changes() bool {
-	return len(r.creations) > 0 || len(r.updates) > 0 && len(r.deletions) > 0
-}
-
-func (r *Result) Errors() error {
+func (r *Result) AccumulatedError() error {
 	return r.errs
 }
 
@@ -224,7 +219,7 @@ func (r *Result) Code() ResultCode {
 	if !r.success {
 		return ResultCodeFailure
 	}
-	if !r.changes() {
+	if len(r.creations) == 0 && len(r.updates) == 0 && len(r.deletions) == 0 {
 		return ResultCodeNoop
 	}
 	return ResultCodeSuccess
@@ -237,7 +232,7 @@ func (r *Result) String() string {
 	if !r.success {
 		return r.summary
 	}
-	if !r.changes() {
+	if len(r.creations) == 0 && len(r.updates) == 0 && len(r.deletions) == 0 {
 		return "No changes"
 	}
 
@@ -279,6 +274,7 @@ func (r *Result) String() string {
 
 func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	logger := zerolog.Ctx(ctx)
+	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
 
 	var result Result
 	var header ManifestHeader
@@ -357,6 +353,9 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 }
 
 func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
+	logger := zerolog.Ctx(ctx)
+	logger.Info().Interface("gorch_response", res).Msg("Sending response")
+
 	if topic == nil {
 		return fmt.Errorf("no topic set, unable to respond")
 	}

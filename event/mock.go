@@ -1,10 +1,10 @@
-package events
+package event
 
 import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/cloudevents/sdk-go/v2/event"
+	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/entur/go-orchestrator"
 )
 
@@ -12,7 +12,7 @@ const MockUserEmail = "mockuser@entur.io"
 
 type MockEventOption func(*orchestrator.Request)
 
-func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestrator.Action, options ...MockEventOption) (*event.Event, error) {
+func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestrator.Action, opts ...MockEventOption) (*cloudevent.Event, error) {
 	newManifest, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err
@@ -28,13 +28,16 @@ func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestra
 		},
 		Action:        action,
 		ResponseTopic: "topic",
-		Manifest:      orchestrator.Manifests{Old: nil, New: newManifest},
+		Manifest: orchestrator.Manifests{
+			Old: nil,
+			New: newManifest,
+		},
 	}
 	if sender == orchestrator.SenderTypeUser {
 		req.Sender.Email = MockUserEmail
 	}
 
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(req)
 	}
 	reqdata, err := json.Marshal(req)
@@ -43,7 +46,7 @@ func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestra
 	}
 	buf := make([]byte, base64.StdEncoding.EncodedLen(len(reqdata)))
 	base64.StdEncoding.Encode(buf, reqdata)
-	data, err := json.Marshal(&EventData{
+	data, err := json.Marshal(&CloudEventData{
 		Message: PubSubMessage{
 			Data:        reqdata,
 			ID:          "id",
@@ -56,7 +59,7 @@ func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestra
 		return nil, err
 	}
 
-	event := event.New(event.CloudEventsVersionV03)
-	event.DataEncoded = data
-	return &event, nil
+	e := cloudevent.New(cloudevent.CloudEventsVersionV03)
+	e.DataEncoded = data
+	return &e, nil
 }
