@@ -10,7 +10,6 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/entur/go-logging"
-	"github.com/rs/zerolog"
 )
 
 // -----------------------
@@ -273,7 +272,7 @@ func (r *Result) String() string {
 // -----------------------
 
 func Receive(ctx context.Context, so Orchestrator, req Request) Result {
-	logger := zerolog.Ctx(ctx)
+	logger := logging.Ctx(ctx)
 	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
 
 	var result Result
@@ -353,7 +352,7 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 }
 
 func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
-	logger := zerolog.Ctx(ctx)
+	logger := logging.Ctx(ctx)
 	logger.Info().Interface("gorch_response", res).Msg("Sending response")
 
 	if topic == nil {

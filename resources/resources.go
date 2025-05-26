@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog"
+	"github.com/entur/go-logging"
 	"google.golang.org/api/idtoken"
 )
 
@@ -154,7 +154,7 @@ func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string)
 type IAMLookupClientOption = idtoken.ClientOption
 
 func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClientOption) (*IAMLookupClient, error) {
-	logger := zerolog.Ctx(ctx)
+	logger := logging.Ctx(ctx)
 
 	client, err := idtoken.NewClient(ctx, url, opts...)
 	if err != nil {
@@ -162,7 +162,7 @@ func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClient
 			return nil, err
 		}
 
-		logger.Debug().Msg("unable to discover idtoken credentials, defaulting to http.Client for IAMLookup")
+		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup")
 		client = &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{

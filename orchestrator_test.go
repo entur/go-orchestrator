@@ -9,7 +9,6 @@ import (
 	"github.com/entur/go-orchestrator"
 	"github.com/entur/go-orchestrator/event"
 	"github.com/entur/go-orchestrator/resources"
-	"github.com/rs/zerolog"
 )
 
 type ExampleSpecV1 struct {
@@ -120,9 +119,7 @@ func NewExampleSO(projectID string) *ExampleSO {
 // -----------------------
 
 func Example() {
-	writer := zerolog.NewConsoleWriter()
-	writer.NoColor = true
-	writer.PartsExclude = []string{"timestamp"}
+	writer := logging.NewConsoleWriter(logging.WithNoColor(), logging.WithNoTimestamp())
 	logger := logging.New(logging.WithWriter(writer))
 
 	so := NewExampleSO("mysoproject")
@@ -171,7 +168,7 @@ func Example() {
 	// DBG Executing MiddlewareBefore handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
 	// #####
-	// DBG unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler orchestation.entur.io/example/v1 Example plan gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing MiddlewareAfter handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// After it's done

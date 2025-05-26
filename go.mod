@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	cloud.google.com/go/pubsub v1.49.0
 	github.com/cloudevents/sdk-go/v2 v2.16.0
-	github.com/entur/go-logging v1.3.0
+	github.com/entur/go-logging v1.4.0
 	github.com/rs/zerolog v1.34.0
 	google.golang.org/api v0.234.0
 )
@@ -45,6 +45,6 @@ require (
 	google.golang.org/genproto v0.0.0-20250519155744-55703ea1f237 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250519155744-55703ea1f237 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250519155744-55703ea1f237 // indirect
-	google.golang.org/grpc v1.72.1 // indirect
+	google.golang.org/grpc v1.72.2 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
