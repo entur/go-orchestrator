@@ -37,7 +37,6 @@
 
 * **refactor:** Rewrote Go Orchestrator to support multiple different ApiVersions and Kinds ([#23](https://github.com/entur/go-orchestrator/issues/23)) ([f771e54](https://github.com/entur/go-orchestrator/commit/f771e543ecc4b9fa8daa37c5779e7dbfe681aee8))
 * release 1.0.0 ([0062970](https://github.com/entur/go-orchestrator/commit/00629702503175c4edb34b0b2d4f6204c428d7e9))
-* release 1.2.0 ([a637238](https://github.com/entur/go-orchestrator/commit/a6372385be9d8a61ff2045f75b24b03b0f737863))
 
 ## [0.2.3](https://github.com/entur/go-orchestrator/compare/v1.2.2...v1.2.3) (2025-05-21)
 
