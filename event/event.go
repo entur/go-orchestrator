@@ -1,4 +1,4 @@
-package orchestrator
+package event
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"cloud.google.com/go/pubsub"
-	logging "github.com/entur/go-logging"
-
-	"github.com/cloudevents/sdk-go/v2/event"
+	cloudevent "github.com/cloudevents/sdk-go/v2/event"
+	"github.com/entur/go-logging"
+	"github.com/entur/go-orchestrator"
 	"github.com/rs/zerolog"
 )
 
@@ -20,23 +20,6 @@ type topicCache struct {
 	mu     sync.Mutex
 	client *pubsub.Client
 	topics map[string]*pubsub.Topic
-}
-
-func (c *topicCache) Topics() []*pubsub.Topic {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	var topics []*pubsub.Topic
-
-	num := len(c.topics)
-	if num > 0 {
-		topics = make([]*pubsub.Topic, 0, num)
-		for _, topic := range c.topics {
-			topics = append(topics, topic)
-		}
-	}
-
-	return topics
 }
 
 func (c *topicCache) Topic(projectID string, topicID string) *pubsub.Topic {
@@ -93,41 +76,59 @@ func WithCustomLogger(logger zerolog.Logger) HandlerOption {
 	}
 }
 
-type EventHandler func(context.Context, event.Event) error
+type EventHandler func(context.Context, cloudevent.Event) error
 
-func NewEventHandler[T any](so Orchestrator[T], options ...HandlerOption) EventHandler {
+func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventHandler {
 	cfg := &HandlerConfig{}
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(cfg)
 	}
 
-	var pLogger zerolog.Logger
+	var parentLogger zerolog.Logger
 	if cfg.logger != nil {
-		pLogger = *cfg.logger
+		parentLogger = *cfg.logger
 	} else {
-		pLogger = logging.New()
+		parentLogger = logging.New()
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
 	cache := newTopicCache(client)
 
-	return func(ctx context.Context, cloudEvent event.Event) error {
-		logger := pLogger.With().Logger()
-		payload, err := ParseEvent[T](cloudEvent)
+	parentLogger.Debug().Msg("Created a new EventHandler")
+	return func(ctx context.Context, e cloudevent.Event) error {
+		logger := parentLogger.With().Logger()
+
+		req, err := ParseEvent(e)
 		if err != nil {
-			logger.Error().Err(err).Msg("ParseEvent failed")
+			logger.Error().Err(err).Msg("Encountered an internal error when calling ParseEvent")
 			return err
 		}
 
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
-			return c.Int("gorch_github_user_id", payload.Sender.ID).
-				Str("gorch_request_id", payload.Metadata.RequestID).
-				Str("gorch_file_name", payload.Origin.FileName).
-				Str("gorch_action", string(payload.Action))
+			return c.Int("gorch_github_user_id", req.Sender.ID).
+				Str("gorch_request_id", req.Metadata.RequestID).
+				Str("gorch_file_name", req.Origin.FileName).
+				Str("gorch_action", string(req.Action))
 		})
 		ctx = logger.WithContext(ctx)
 
-		topic := cache.TopicFullID(payload.ResponseTopic)
-		return Process(ctx, so, topic, payload)
+		result := orchestrator.Receive(ctx, so, *req)
+		err = result.AccumulatedError()
+		if err != nil {
+			logger.Error().Stack().Err(err).
+				Interface("gorch_result_creations", result.Creations()).
+				Interface("gorch_result_updates", result.Updates()).
+				Interface("gorch_result_deletions", result.Deletions()).
+				Msg("Encountered an internal error whilst processing request")
+		}
+
+		res := orchestrator.NewResponse(req.Metadata, result.Code(), result.String())
+		topic := cache.TopicFullID(req.ResponseTopic)
+
+		err = orchestrator.Respond(ctx, topic, res)
+		if err != nil {
+			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
+		}
+		return err
 	}
 }

@@ -3,9 +3,13 @@ package orchestrator
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 
-	"google.golang.org/api/idtoken"
+	"cloud.google.com/go/pubsub"
+	"github.com/entur/go-logging"
 )
 
 // -----------------------
@@ -16,10 +20,6 @@ type ApiVersion string
 
 type Kind string
 
-type Metadata struct {
-	ID string `json:"id"`
-}
-
 type OuterMetadata struct {
 	RequestID string `json:"requestId"`
 }
@@ -27,7 +27,7 @@ type OuterMetadata struct {
 type ResultCode string
 
 const (
-	ResultCodeSuccess ResultCode = "success" // Sub-Orchestrator succeded in processing the action
+	ResultCodeSuccess ResultCode = "success" // Sub-Orchestrator succeeded in processing the action
 	ResultCodeFailure ResultCode = "failure" // Sub-Orchestrator detected a user failure when processing the action
 	ResultCodeNoop    ResultCode = "noop"    // Sub-Orchestrator detected no changes after processing the action
 	ResultCodeError   ResultCode = "error"   // Sub-Orchestrator experienced an internal error when processing the action
@@ -40,11 +40,6 @@ type Resource struct {
 }
 
 type ResourceIAMLookup = Resource
-
-func (resource *ResourceIAMLookup) ToClient() IAMLookupClient {
-	client, _ := idtoken.NewClient(context.Background(), resource.Url)
-	return NewIAMLookupClient(client, resource.Url)
-}
 
 type Resources struct {
 	IAM ResourceIAMLookup `json:"iamLookup"`
@@ -81,9 +76,27 @@ type Sender struct {
 	Type  SenderType `json:"type"`
 }
 
-type Manifests[T any] struct {
-	Old *T `json:"old"`
-	New T  `json:"new"`
+type ManifestHeader struct {
+	ApiVersion ApiVersion `json:"apiVersion"`
+	Kind       Kind       `json:"kind"`
+}
+
+type Manifest = json.RawMessage
+
+type Manifests struct {
+	Old *Manifest `json:"old"`
+	New Manifest  `json:"new"`
+}
+
+type Request struct {
+	ApiVersion    string        `json:"apiVersion"`
+	Metadata      OuterMetadata `json:"metadata"`
+	Resources     Resources     `json:"resources"`
+	ResponseTopic string        `json:"responseTopic"`
+	Action        Action        `json:"action"`
+	Origin        Origin        `json:"origin"`
+	Sender        Sender        `json:"sender"`
+	Manifest      Manifests     `json:"manifest"`
 }
 
 type Response struct {
@@ -93,21 +106,10 @@ type Response struct {
 	Output     string        `json:"output"`
 }
 
-type Request[T any] struct {
-	ApiVersion    string        `json:"apiVersion"`
-	Metadata      OuterMetadata `json:"metadata"`
-	Resources     Resources     `json:"resources"`
-	ResponseTopic string        `json:"responseTopic"`
-	Action        Action        `json:"action"`
-	Origin        Origin        `json:"origin"`
-	Sender        Sender        `json:"sender"`
-	Manifest      Manifests[T]  `json:"manifest"`
-}
-
-func (req Request[T]) ToResponse(code ResultCode, msg string) Response {
+func NewResponse(metadata OuterMetadata, code ResultCode, msg string) Response {
 	return Response{
 		ApiVersion: "orchestrator.entur.io/response/v1",
-		Metadata:   req.Metadata,
+		Metadata:   metadata,
 		ResultCode: code,
 		Output:     base64.StdEncoding.EncodeToString([]byte(msg)),
 	}
@@ -117,53 +119,143 @@ func (req Request[T]) ToResponse(code ResultCode, msg string) Response {
 // Sub Orchestrator
 // -----------------------
 
-type Orchestrator[T any] interface {
-	ProjectID() string
-	Plan(context.Context, Request[T]) (Result, error)
-	PlanDestroy(context.Context, Request[T]) (Result, error)
-	Apply(context.Context, Request[T]) (Result, error)
-	Destroy(context.Context, Request[T]) (Result, error)
+type ManifestHandler interface {
+	// Which ApiVersion and Kind this handler correlates with
+	ApiVersion() ApiVersion
+	Kind() Kind
+	// Actions
+	Plan(context.Context, Request, *Result) error
+	PlanDestroy(context.Context, Request, *Result) error
+	Apply(context.Context, Request, *Result) error
+	Destroy(context.Context, Request, *Result) error
+}
+
+type Orchestrator interface {
+	ProjectID() string           // The project this orchestrator is running in
+	Handlers() []ManifestHandler // The manifests this orchestrator can handle
+}
+
+type OrchestratorMiddlewareBefore interface {
+	MiddlewareBefore(context.Context, Request, *Result) error
+}
+
+type OrchestratorMiddlewareAfter interface {
+	MiddlewareAfter(context.Context, Request, *Result) error
 }
 
 type Result struct {
-	Summary   string   // Your failure or success summary.
-	Success   bool     // If the action succeeded or not. A false value indicates a user error
-	Creations []string // A list of resources that are planned/being created.
-	Updates   []string // A list of resources that are planned/being updated.
-	Deletions []string // A list of resources that are planned/being deleted.
+	done      bool     // If the result has been marked as done
+	errs      error    // The accumulated errors for this result
+	summary   string   // Failure or Success summary
+	success   bool     // If the action succeeded or not. A false value indicates a user error
+	creations []string // A list of resources that are planned/being created.
+	updates   []string // A list of resources that are planned/being updated.
+	deletions []string // A list of resources that are planned/being deleted.
+}
+
+func (r *Result) AccumulatedError() error {
+	return r.errs
+}
+
+func (r *Result) Done(summary string, success bool) {
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to mark an already finished result as done"))
+	} else {
+		r.done = true
+		r.summary = summary
+		r.success = success
+	}
+}
+
+func (r *Result) Create(change ...string) {
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a create change to an already finished result"))
+	} else {
+		r.creations = append(r.creations, change...)
+	}
+}
+
+func (r *Result) Creations() []string {
+	creations := make([]string, len(r.creations))
+	copy(creations, r.creations)
+	return creations
+}
+
+func (r *Result) Update(change ...string) {
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add an update change to an already finished result"))
+	} else {
+		r.updates = append(r.updates, change...)
+	}
+}
+
+func (r *Result) Updates() []string {
+	updates := make([]string, len(r.updates))
+	copy(updates, r.updates)
+	return updates
+}
+
+func (r *Result) Delete(change ...string) {
+	if r.done {
+		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a delete change to an already finished result"))
+	} else {
+		r.deletions = append(r.deletions, change...)
+	}
+}
+
+func (r *Result) Deletions() []string {
+	deletions := make([]string, len(r.deletions))
+	copy(deletions, r.deletions)
+	return deletions
+}
+
+func (r *Result) Code() ResultCode {
+	if r.errs != nil || !r.done {
+		return ResultCodeError
+	}
+	if !r.success {
+		return ResultCodeFailure
+	}
+	if len(r.creations) == 0 && len(r.updates) == 0 && len(r.deletions) == 0 {
+		return ResultCodeNoop
+	}
+	return ResultCodeSuccess
 }
 
 func (r *Result) String() string {
-	if !r.Success {
-		return r.Summary
+	if r.errs != nil || !r.done {
+		return "Internal error"
 	}
-	if len(r.Creations) == 0 && len(r.Updates) == 0 && len(r.Deletions) == 0 {
-		return "No changes detected"
+	if !r.success {
+		return r.summary
+	}
+	if len(r.creations) == 0 && len(r.updates) == 0 && len(r.deletions) == 0 {
+		return "No changes"
 	}
 
 	var builder strings.Builder
 
-	builder.WriteString(r.Summary)
+	builder.WriteString(r.summary)
 	builder.WriteString("\n")
-	if len(r.Creations) > 0 {
+	if len(r.creations) > 0 {
 		builder.WriteString("Created:\n")
-		for _, created := range r.Creations {
+		for _, created := range r.creations {
 			builder.WriteString("+ ")
 			builder.WriteString(created)
 			builder.WriteString("\n")
 		}
 	}
-	if len(r.Updates) > 0 {
+	if len(r.updates) > 0 {
 		builder.WriteString("Updated:\n")
-		for _, updated := range r.Updates {
+		for _, updated := range r.updates {
 			builder.WriteString("! ")
 			builder.WriteString(updated)
 			builder.WriteString("\n")
 		}
 	}
-	if len(r.Deletions) > 0 {
+	if len(r.deletions) > 0 {
 		builder.WriteString("Deleted:\n")
-		for _, deleted := range r.Deletions {
+		for _, deleted := range r.deletions {
 			builder.WriteString("- ")
 			builder.WriteString(deleted)
 			builder.WriteString("\n")
@@ -171,4 +263,108 @@ func (r *Result) String() string {
 	}
 
 	return builder.String()
+}
+
+// -----------------------
+// Processing
+// -----------------------
+
+func Receive(ctx context.Context, so Orchestrator, req Request) Result {
+	logger := logging.Ctx(ctx)
+	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
+
+	var result Result
+	var header ManifestHeader
+
+	err := json.Unmarshal(req.Manifest.New, &header)
+	if err != nil {
+		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
+	} else {
+		match := false
+
+		for _, h := range so.Handlers() {
+			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
+				logger.Debug().Msgf("Found ManifestHandler %s %s", header.ApiVersion, header.Kind)
+				match = true
+
+				before, ok := so.(OrchestratorMiddlewareBefore)
+				if ok {
+					logger.Debug().Msg("Executing MiddlewareBefore handler")
+					err = before.MiddlewareBefore(ctx, req, &result)
+					if err != nil {
+						err = fmt.Errorf("so middleware (before): %w", err)
+						break
+					}
+					if result.done {
+						break
+					}
+				}
+
+				logger.Debug().Msgf("Executing ManifestHandler %s %s %s", header.ApiVersion, header.Kind, req.Action)
+				switch req.Action {
+				case ActionApply:
+					err = h.Apply(ctx, req, &result)
+				case ActionPlan:
+					err = h.Plan(ctx, req, &result)
+				case ActionPlanDestroy:
+					err = h.PlanDestroy(ctx, req, &result)
+				case ActionDestroy:
+					err = h.Destroy(ctx, req, &result)
+				default:
+					err = fmt.Errorf("invalid action")
+				}
+
+				if err != nil {
+					err = fmt.Errorf("ManifestHandler %s %s %s: %w", header.ApiVersion, header.Kind, req.Action, err)
+					break
+				}
+
+				after, ok := so.(OrchestratorMiddlewareAfter)
+				if ok {
+					logger.Debug().Msg("Executing MiddlewareAfter handler")
+					err = after.MiddlewareAfter(ctx, req, &result)
+					if err != nil {
+						err = fmt.Errorf("so middleware (after): %w", err)
+						break
+					}
+					if result.done {
+						break
+					}
+				}
+
+				if !result.done {
+					err = fmt.Errorf("forgot to call .Done() in handler %s %s %s", header.ApiVersion, header.Kind, req.Action)
+				}
+
+				break
+			}
+		}
+
+		if !match {
+			err = fmt.Errorf("no matching ManifestHandler for %s %s", header.ApiVersion, header.Kind)
+		}
+	}
+
+	result.errs = errors.Join(result.errs, err)
+	return result
+}
+
+func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
+	logger := logging.Ctx(ctx)
+	logger.Info().Interface("gorch_response", res).Msg("Sending response")
+
+	if topic == nil {
+		return fmt.Errorf("no topic set, unable to respond")
+	}
+
+	enc, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	result := topic.Publish(ctx, &pubsub.Message{
+		Data: enc,
+	})
+	_, err = result.Get(ctx)
+	return err
 }
