@@ -119,8 +119,6 @@ func NewResponse(metadata OuterMetadata, code ResultCode, msg string) Response {
 // Sub Orchestrator
 // -----------------------
 
-type ActionHandler = func(context.Context, Request, *Result) error
-
 type ManifestHandler interface {
 	// Which ApiVersion and Kind this handler correlates with
 	ApiVersion() ApiVersion

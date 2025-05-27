@@ -104,7 +104,10 @@ func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Reques
 	return nil
 }
 
-func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, _ *orchestrator.Result) error {
+func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, res *orchestrator.Result) error {
+	logger := logging.Ctx(ctx)
+	logger.Info().Msg("Auditing this thing")
+
 	fmt.Println("After it's done")
 	return nil
 }
@@ -175,6 +178,7 @@ func Example() {
 	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler orchestation.entur.io/example/v1 Example plan gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing MiddlewareAfter handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// After it's done
 	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
