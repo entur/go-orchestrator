@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/entur/go-logging"
@@ -158,7 +159,8 @@ func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClient
 
 	client, err := idtoken.NewClient(ctx, url, opts...)
 	if err != nil {
-		if err.Error() != "idtoken: unsupported credentials type" {
+		errStr := err.Error()
+		if !strings.HasPrefix(errStr, "idtoken: unsupported credentials type") && !strings.HasPrefix(errStr, "google: could not find default credentials") {
 			return nil, err
 		}
 
