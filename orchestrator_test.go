@@ -14,6 +14,7 @@ import (
 type ExampleSpecV1 struct {
 	Name string `json:"name"`
 }
+
 type ExampleManifestV1 struct {
 	orchestrator.ManifestHeader
 	Spec ExampleSpecV1 `json:"spec"`
@@ -26,7 +27,10 @@ type ExampleManifestV1Handler struct {
 func (h *ExampleManifestV1Handler) ApiVersion() orchestrator.ApiVersion {
 	return "orchestation.entur.io/example/v1"
 }
-func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind { return "Example" }
+
+func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind { 
+	return "Example" 
+}
 
 func (so *ExampleManifestV1Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest ExampleManifestV1
