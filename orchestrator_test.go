@@ -28,8 +28,8 @@ func (h *ExampleManifestV1Handler) ApiVersion() orchestrator.ApiVersion {
 	return "orchestation.entur.io/example/v1"
 }
 
-func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind { 
-	return "Example" 
+func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind {
+	return "Example"
 }
 
 func (h *ExampleManifestV1Handler) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {

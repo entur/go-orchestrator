@@ -283,7 +283,7 @@ func (c contextCache) Get(key string) any {
 	return v
 }
 
-func (c contextCache)  Set(key string, value any) {
+func (c contextCache) Set(key string, value any) {
 	c.values[key] = value
 }
 
@@ -297,7 +297,7 @@ type ctxKey struct{}
 
 func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Request, res *Result) error {
 	var err error
-	
+
 	ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
 	logger := logging.Ctx(ctx)
 
@@ -308,7 +308,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 
 	before, ok := so.(MiddlewareBefore)
 	if ok {
-		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareBefore" , project)
+		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareBefore", project)
 		err = before.MiddlewareBefore(ctx, *req, res)
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (before): %w", err)
@@ -391,7 +391,7 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
 	} else {
 		match := false
-		
+
 		for _, h := range so.Handlers() {
 			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
 				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.ApiVersion, header.Kind)
@@ -402,7 +402,7 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 		}
 
 		if !match {
-			err = fmt.Errorf("no matching ManifestHandler for %s %s", header.ApiVersion, header.Kind)
+			err = fmt.Errorf("no matching ManifestHandler for (%s, %s)", header.ApiVersion, header.Kind)
 		}
 	}
 
@@ -431,7 +431,7 @@ func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
 }
 
 // Retrieve the cache attached to the current request context
-func CtxCache(ctx context.Context) contextCache {	
+func CtxCache(ctx context.Context) contextCache {
 	v := ctx.Value(ctxKey{})
 	if v == nil {
 		return newContextCache()
