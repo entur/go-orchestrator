@@ -119,6 +119,16 @@ func NewResponse(metadata OuterMetadata, code ResultCode, msg string) Response {
 // Sub Orchestrator
 // -----------------------
 
+type Middleware = func(context.Context, Request, *Result) error
+
+type MiddlewareBefore interface {
+	MiddlewareBefore(context.Context, Request, *Result) error
+}
+
+type MiddlewareAfter interface {
+	MiddlewareAfter(context.Context, Request, *Result) error
+}
+
 type ManifestHandler interface {
 	// Which ApiVersion and Kind this handler correlates with
 	ApiVersion() ApiVersion
@@ -133,14 +143,6 @@ type ManifestHandler interface {
 type Orchestrator interface {
 	ProjectID() string           // The project this orchestrator is running in
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
-}
-
-type OrchestratorMiddlewareBefore interface {
-	MiddlewareBefore(context.Context, Request, *Result) error
-}
-
-type OrchestratorMiddlewareAfter interface {
-	MiddlewareAfter(context.Context, Request, *Result) error
 }
 
 type Result struct {
@@ -293,14 +295,88 @@ func newContextCache() contextCache {
 
 type ctxKey struct{}
 
-// Retrieve the cache attached to the current request context
-func CtxCache(ctx context.Context) contextCache {	
-	v := ctx.Value(ctxKey{})
-	if v == nil {
-		return newContextCache()
+func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Request, res *Result) error {
+	var err error
+	
+	ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
+	logger := logging.Ctx(ctx)
+
+	project := so.ProjectID()
+	version := h.ApiVersion()
+	kind := h.Kind()
+	action := req.Action
+
+	before, ok := so.(MiddlewareBefore)
+	if ok {
+		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareBefore" , project)
+		err = before.MiddlewareBefore(ctx, *req, res)
+		if err != nil {
+			return fmt.Errorf("orchestrator middleware (before): %w", err)
+		}
+		if res.done {
+			return nil
+		}
 	}
-	c, _ := v.(contextCache)
-	return c
+
+	before, ok = h.(MiddlewareBefore)
+	if ok {
+		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s) MiddlewareBefore", version, kind, action)
+		err = before.MiddlewareBefore(ctx, *req, res)
+		if err != nil {
+			return fmt.Errorf("handler middleware (before): %w", err)
+		}
+		if res.done {
+			return nil
+		}
+	}
+
+	logger.Debug().Msgf("Executing ManifestHandler (%s %s %s)", version, kind, action)
+	switch req.Action {
+	case ActionApply:
+		err = h.Apply(ctx, *req, res)
+	case ActionPlan:
+		err = h.Plan(ctx, *req, res)
+	case ActionPlanDestroy:
+		err = h.PlanDestroy(ctx, *req, res)
+	case ActionDestroy:
+		err = h.Destroy(ctx, *req, res)
+	default:
+		err = fmt.Errorf("invalid action")
+	}
+
+	if err != nil {
+		return fmt.Errorf("manifest handler (%s, %s, %s): %w", version, kind, action, err)
+	}
+
+	after, ok := h.(MiddlewareAfter)
+	if ok {
+		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s) MiddlewareAfter", version, kind, action)
+		err = after.MiddlewareAfter(ctx, *req, res)
+		if err != nil {
+			return fmt.Errorf("handler middleware (after): %w", err)
+		}
+		if res.done {
+			return nil
+		}
+	}
+
+	after, ok = so.(MiddlewareAfter)
+	if ok {
+		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareAfter", project)
+		err = after.MiddlewareAfter(ctx, *req, res)
+		if err != nil {
+			return fmt.Errorf("orchestrator middleware (after): %w", err)
+		}
+		if res.done {
+			return nil
+		}
+	}
+
+	if !res.done {
+		return fmt.Errorf("forgot to call .Done() in manifest handler (%s, %s, %s)", version, kind, action)
+	}
+
+	return nil
 }
 
 func Receive(ctx context.Context, so Orchestrator, req Request) Result {
@@ -315,62 +391,12 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
 	} else {
 		match := false
-
+		
 		for _, h := range so.Handlers() {
 			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
-				logger.Debug().Msgf("Found ManifestHandler %s %s", header.ApiVersion, header.Kind)
+				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.ApiVersion, header.Kind)
+				err = process(ctx, so, h, &req, &result)
 				match = true
-				ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
-
-				before, ok := so.(OrchestratorMiddlewareBefore)
-				if ok {
-					logger.Debug().Msg("Executing MiddlewareBefore handler")
-					err = before.MiddlewareBefore(ctx, req, &result)
-					if err != nil {
-						err = fmt.Errorf("so middleware (before): %w", err)
-						break
-					}
-					if result.done {
-						break
-					}
-				}
-
-				logger.Debug().Msgf("Executing ManifestHandler %s %s %s", header.ApiVersion, header.Kind, req.Action)
-				switch req.Action {
-				case ActionApply:
-					err = h.Apply(ctx, req, &result)
-				case ActionPlan:
-					err = h.Plan(ctx, req, &result)
-				case ActionPlanDestroy:
-					err = h.PlanDestroy(ctx, req, &result)
-				case ActionDestroy:
-					err = h.Destroy(ctx, req, &result)
-				default:
-					err = fmt.Errorf("invalid action")
-				}
-
-				if err != nil {
-					err = fmt.Errorf("ManifestHandler %s %s %s: %w", header.ApiVersion, header.Kind, req.Action, err)
-					break
-				}
-
-				after, ok := so.(OrchestratorMiddlewareAfter)
-				if ok {
-					logger.Debug().Msg("Executing MiddlewareAfter handler")
-					err = after.MiddlewareAfter(ctx, req, &result)
-					if err != nil {
-						err = fmt.Errorf("so middleware (after): %w", err)
-						break
-					}
-					if result.done {
-						break
-					}
-				}
-
-				if !result.done {
-					err = fmt.Errorf("forgot to call .Done() in handler %s %s %s", header.ApiVersion, header.Kind, req.Action)
-				}
-
 				break
 			}
 		}
@@ -402,4 +428,14 @@ func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
 	})
 	_, err = result.Get(ctx)
 	return err
+}
+
+// Retrieve the cache attached to the current request context
+func CtxCache(ctx context.Context) contextCache {	
+	v := ctx.Value(ctxKey{})
+	if v == nil {
+		return newContextCache()
+	}
+	c, _ := v.(contextCache)
+	return c
 }
