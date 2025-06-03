@@ -269,6 +269,40 @@ func (r *Result) String() string {
 // Processing
 // -----------------------
 
+type contextCache struct {
+	values map[string]any
+}
+
+func (c contextCache) Get(key string) any {
+	v, ok := c.values[key]
+	if !ok {
+		return nil
+	}
+	return v
+}
+
+func (c contextCache)  Set(key string, value any) {
+	c.values[key] = value
+}
+
+func newContextCache() contextCache {
+	return contextCache{
+		values: map[string]any{},
+	}
+}
+
+type ctxKey struct{}
+
+// Retrieve the cache attached to the current request context
+func Cache(ctx context.Context) contextCache {	
+	v := ctx.Value(ctxKey{})
+	if v == nil {
+		return newContextCache()
+	}
+	c, _ := v.(contextCache)
+	return c
+}
+
 func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	logger := logging.Ctx(ctx)
 	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
@@ -286,6 +320,7 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
 				logger.Debug().Msgf("Found ManifestHandler %s %s", header.ApiVersion, header.Kind)
 				match = true
+				ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
 
 				before, ok := so.(OrchestratorMiddlewareBefore)
 				if ok {
