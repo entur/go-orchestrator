@@ -33,7 +33,7 @@ func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind {
 }
 
 func (h *ExampleManifestV1Handler) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	fmt.Println("After Orhcestrator middleware executes, but before manifest handler executes")
+	fmt.Println("After Orchestrator middleware executes, but before manifest handler executes")
 	return nil
 }
 
@@ -193,7 +193,7 @@ func Example() {
 	// #####
 	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler (orchestation.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// After Orhcestrator middleware executes, but before manifest handler executes
+	// After Orchestrator middleware executes, but before manifest handler executes
 	// DBG Executing ManifestHandler (orchestation.entur.io/example/v1 Example plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing Orchestrator (mysoproject) MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
