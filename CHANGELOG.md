@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/entur/go-orchestrator/compare/v1.0.0...v1.1.0) (2025-06-03)
+
+
+### Features
+
+* Added ctx request cache ([#29](https://github.com/entur/go-orchestrator/issues/29)) ([3ca2833](https://github.com/entur/go-orchestrator/commit/3ca283379bbe35d7ec854885964c0cfacb3bdfc9))
+* Added support for manifest handler middlewares too ([#31](https://github.com/entur/go-orchestrator/issues/31)) ([6566d29](https://github.com/entur/go-orchestrator/commit/6566d29c5565ebca6dae6cca440e7bfb490140ad))
+
 ## [1.0.0](https://github.com/entur/go-orchestrator/compare/v1.2.3...v1.0.0) (2025-05-27)
 
 
