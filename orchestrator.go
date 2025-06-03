@@ -330,7 +330,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		}
 	}
 
-	logger.Debug().Msgf("Executing ManifestHandler (%s %s %s)", version, kind, action)
+	logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s)", version, kind, action)
 	switch req.Action {
 	case ActionApply:
 		err = h.Apply(ctx, *req, res)
