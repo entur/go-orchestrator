@@ -294,7 +294,7 @@ func newContextCache() contextCache {
 type ctxKey struct{}
 
 // Retrieve the cache attached to the current request context
-func Cache(ctx context.Context) contextCache {	
+func CtxCache(ctx context.Context) contextCache {	
 	v := ctx.Value(ctxKey{})
 	if v == nil {
 		return newContextCache()

@@ -103,7 +103,7 @@ func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Reques
 	}
 
 	// The cache is shared between middlewares and handlers!
-	cache := orchestrator.Cache(ctx)
+	cache := orchestrator.CtxCache(ctx)
 	cache.Set("cache_key", "something something!")
 
 	return nil
@@ -113,7 +113,7 @@ func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, 
 	logger := logging.Ctx(ctx)
 	logger.Info().Msg("Auditing this thing")
 
-	cache := orchestrator.Cache(ctx)
+	cache := orchestrator.CtxCache(ctx)
 	value := cache.Get("cache_key")
 	if str, ok := value.(string); ok {
 		fmt.Printf("Got value from cache: %s\n", str)
