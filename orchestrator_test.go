@@ -101,6 +101,11 @@ func (h ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Reques
 			return nil
 		}
 	}
+
+	// The cache is shared between middlewares and handlers!
+	cache := orchestrator.Cache(ctx)
+	cache.Set("cache_key", "something something!")
+
 	return nil
 }
 
@@ -108,7 +113,14 @@ func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, 
 	logger := logging.Ctx(ctx)
 	logger.Info().Msg("Auditing this thing")
 
+	cache := orchestrator.Cache(ctx)
+	value := cache.Get("cache_key")
+	if str, ok := value.(string); ok {
+		fmt.Printf("Got value from cache: %s\n", str)
+	}
+
 	fmt.Println("After it's done")
+	fmt.Println("#####")
 	return nil
 }
 
@@ -179,7 +191,9 @@ func Example() {
 	// DBG Executing ManifestHandler orchestation.entur.io/example/v1 Example plan gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing MiddlewareAfter handler gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// Got value from cache: something something!
 	// After it's done
+	// #####
 	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// ERR Encountered error error="no topic set, unable to respond"
