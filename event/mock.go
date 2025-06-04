@@ -8,7 +8,6 @@ import (
 	"github.com/entur/go-orchestrator"
 )
 
-
 const MockUserEmail = orchestrator.MockUserEmail
 
 type MockEventOption = orchestrator.MockRequestOption
@@ -23,7 +22,7 @@ func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestra
 	if err != nil {
 		return nil, err
 	}
-	
+
 	buf := make([]byte, base64.StdEncoding.EncodedLen(len(reqdata)))
 	base64.StdEncoding.Encode(buf, reqdata)
 	data, err := json.Marshal(&CloudEventData{

@@ -186,15 +186,15 @@ func Example() {
 	}
 	// Output:
 	// DBG Created a new EventHandler
-	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestation.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
-	// DBG Found ManifestHandler (orchestation.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
+	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
 	// #####
 	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing ManifestHandler (orchestation.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// After Orchestrator middleware executes, but before manifest handler executes
-	// DBG Executing ManifestHandler (orchestation.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing Orchestrator (mysoproject) MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Got value from cache: something something!
