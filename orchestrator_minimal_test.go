@@ -9,15 +9,21 @@ import (
 	"github.com/entur/go-orchestrator/event"
 )
 
+type MinimalMetadata struct {
+	ID string `json:"id"`
+}
+
 type MinimalSpec struct {
 	Name string `json:"name"`
 }
 
 // apiVersion: orchestrator.entur.io/example/v1
 // kind: Example
+// metadata: { id: Some Id }
 // spec: { name: Some Name }
 type MinimalManifest struct {
 	orchestrator.ManifestHeader
+	Metadata ExampeMetadataV1 `json:"metadata"`
 	Spec MinimalSpec `json:"spec"`
 }
 

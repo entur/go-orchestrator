@@ -43,6 +43,7 @@ Typical dependencies
 import (
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
+	"github.com/entur/go-orchestrator/event"
 )
 ```
 
@@ -59,6 +60,8 @@ This example creates a minimal orchestrator, using mostly default behavior. It h
 ```yaml
 apiVersion: orchestrator.entur.io/example/v1
 kind: Example
+metadata:
+	id: someid
 spec:
 	name: Some name
 ```
@@ -80,6 +83,8 @@ The code is written in a way to make it clear that a future v2 may come and serv
 ```yaml
 apiVersion: orchestrator.entur.io/example/v1
 kind: Example
+metadata:
+	id: someid
 spec:
 	name: Some name
 ```

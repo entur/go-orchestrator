@@ -15,8 +15,13 @@ type ExampleSpecV1 struct {
 	Name string `json:"name"`
 }
 
+type ExampeMetadataV1 struct {
+	ID string `json:"id"`
+}
+
 type ExampleManifestV1 struct {
 	orchestrator.ManifestHeader
+	Metadata ExampeMetadataV1 `json:"metadata"`
 	Spec ExampleSpecV1 `json:"spec"`
 }
 
@@ -151,6 +156,9 @@ func Example() {
 		Spec: ExampleSpecV1{
 			Name: "Test Name",
 		},
+		Metadata: ExampeMetadataV1{
+			ID: "manifestid",
+		},
 		ManifestHeader: orchestrator.ManifestHeader{
 			ApiVersion: so.handlers[0].ApiVersion(),
 			Kind:       so.handlers[0].Kind(),
@@ -186,7 +194,7 @@ func Example() {
 	}
 	// Output:
 	// DBG Created a new EventHandler
-	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
+	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
 	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// Before it begins
