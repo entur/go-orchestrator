@@ -159,6 +159,10 @@ func (r *Result) AccumulatedError() error {
 	return r.errs
 }
 
+func (r *Result) IsDone() bool {
+	return r.done
+}
+
 func (r *Result) Done(summary string, success bool) {
 	if r.done {
 		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to mark an already finished result as done"))
