@@ -25,7 +25,7 @@ type ExampleManifestV1Handler struct {
 }
 
 func (h *ExampleManifestV1Handler) ApiVersion() orchestrator.ApiVersion {
-	return "orchestation.entur.io/example/v1"
+	return "orchestrator.entur.io/example/v1"
 }
 
 func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind {
@@ -51,11 +51,11 @@ func (h *ExampleManifestV1Handler) Plan(ctx context.Context, req orchestrator.Re
 	return nil
 }
 
-func (so *ExampleManifestV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *ExampleManifestV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("plandestroy not implemented")
 }
 
-func (so *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest ExampleManifestV1
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
@@ -69,7 +69,7 @@ func (so *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.
 	return nil
 }
 
-func (so *ExampleManifestV1Handler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *ExampleManifestV1Handler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("destroy not implemented")
 }
 
@@ -114,7 +114,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 	return nil
 }
 
-func (h ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, res *orchestrator.Result) error {
+func (so ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, res *orchestrator.Result) error {
 	logger := logging.Ctx(ctx)
 	logger.Info().Msg("Auditing this thing")
 
@@ -160,7 +160,7 @@ func Example() {
 	iamServer, _ := resources.NewMockIAMLookupServer(
 		resources.WithPort(8001),
 		resources.WithUserProjectRoles(
-			event.MockUserEmail,
+			orchestrator.MockUserEmail,
 			"ent-someproject-dev",
 			[]string{"your_so_role"},
 		),
