@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/entur/go-orchestrator/compare/v1.2.0...v1.2.1) (2025-06-04)
+
+
+### Bug Fixes
+
+* Fixed some requests failing (GCPAppProjectIDS) due to EOF error ([#34](https://github.com/entur/go-orchestrator/issues/34)) ([5d92b74](https://github.com/entur/go-orchestrator/commit/5d92b74688d592dff267c590faae763ee09da994))
+
 ## [1.2.0](https://github.com/entur/go-orchestrator/compare/v1.1.0...v1.2.0) (2025-06-04)
 
 
