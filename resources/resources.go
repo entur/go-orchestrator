@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -25,7 +26,7 @@ func request(ctx context.Context, client *http.Client, method string, url string
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return 0, fmt.Errorf("http request body failed to marshal: %w", err)
+		return 0, fmt.Errorf("http '%s' request body failed to marshal: %w", method, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(enc))
@@ -42,13 +43,11 @@ func request(ctx context.Context, client *http.Client, method string, url string
 	if err != nil {
 		return 0, fmt.Errorf("http '%s' request failed: %w", method, err)
 	}
-	defer func() {
-		_ = res.Body.Close()
-	}()
+	defer res.Body.Close()
 
 	dec := json.NewDecoder(res.Body)
 	err = dec.Decode(resBody)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return res.StatusCode, fmt.Errorf("http '%s' response failed to read: %w", method, err)
 	}
 
@@ -161,7 +160,7 @@ func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClient
 	if err != nil {
 		errStr := err.Error()
 		if !strings.HasPrefix(errStr, "idtoken: unsupported credentials type") && !strings.HasPrefix(errStr, "google: could not find default credentials") {
-			return nil, err
+			return nil, fmt.Errorf("unable to create iamlookup client: %w", err)
 		}
 
 		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup")
