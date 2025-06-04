@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/entur/go-orchestrator/compare/v1.2.2...v1.3.0) (2025-06-04)
+
+
+### Features
+
+* Added IsDone function to Result ([#40](https://github.com/entur/go-orchestrator/issues/40)) ([e4bd7c1](https://github.com/entur/go-orchestrator/commit/e4bd7c1c6ea31e78bd79f3719708c349e1d1f544))
+
 ## [1.2.2](https://github.com/entur/go-orchestrator/compare/v1.2.1...v1.2.2) (2025-06-04)
 
 
