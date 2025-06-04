@@ -45,10 +45,12 @@ func request(ctx context.Context, client *http.Client, method string, url string
 	}
 	defer res.Body.Close()
 
-	dec := json.NewDecoder(res.Body)
-	err = dec.Decode(resBody)
-	if err != nil && err != io.EOF {
-		return res.StatusCode, fmt.Errorf("http '%s' response failed to read: %w", method, err)
+	if res.Header.Get("Content-Type") == "application/json" {
+		dec := json.NewDecoder(res.Body)
+		err = dec.Decode(resBody)
+		if err != nil && err != io.EOF {
+			return res.StatusCode, fmt.Errorf("http '%s' response failed to decode: %w", method, err)
+		}
 	}
 
 	return res.StatusCode, nil
