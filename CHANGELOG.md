@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/entur/go-orchestrator/compare/v1.1.0...v1.2.0) (2025-06-04)
+
+
+### Features
+
+* Support mocking request directly ([#32](https://github.com/entur/go-orchestrator/issues/32)) ([5394dd8](https://github.com/entur/go-orchestrator/commit/5394dd8eda11db026cc03fb56f07a8f98126a0a6))
+
 ## [1.1.0](https://github.com/entur/go-orchestrator/compare/v1.0.0...v1.1.0) (2025-06-03)
 
 
