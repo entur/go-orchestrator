@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/entur/go-orchestrator/compare/v1.2.1...v1.2.2) (2025-06-04)
+
+
+### Bug Fixes
+
+* Don't attempt unmarshalling non-json request responses ([#36](https://github.com/entur/go-orchestrator/issues/36)) ([0bf5858](https://github.com/entur/go-orchestrator/commit/0bf5858b0e7221b5c8866cd49c2d31f281a49c4f))
+
 ## [1.2.1](https://github.com/entur/go-orchestrator/compare/v1.2.0...v1.2.1) (2025-06-04)
 
 
