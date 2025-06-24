@@ -7,7 +7,7 @@ require (
 	github.com/cloudevents/sdk-go/v2 v2.16.1
 	github.com/entur/go-logging v1.5.0
 	github.com/rs/zerolog v1.34.0
-	google.golang.org/api v0.237.0
+	google.golang.org/api v0.238.0
 )
 
 require (
