@@ -66,7 +66,7 @@ spec:
 	name: Some name
 ```
 
-See `./orchestrator_minimal_test.go` for a minimal test and implementation.
+See `./orchestrator_minimal_example_test.go` for a minimal test and implementation.
 
 ## Full example
 
@@ -89,4 +89,4 @@ spec:
 	name: Some name
 ```
 
-See `./orchestrator_test.go` for a complete test and implementation.
+See `./orchestrator_example_test.go` for a complete test and implementation.

@@ -19,6 +19,12 @@ func NewMockRequest(manifest any, sender SenderType, action Action, opts ...Mock
 		Metadata: OuterMetadata{
 			RequestID: "mockid",
 		},
+		Origin: Origin{
+			Repository: GitRepository{
+				DefaultBranch: "main",
+				Visibility: GitRepositoryVisbilityPublic,
+			},
+		},
 		Sender: Sender{
 			Type: sender,
 		},

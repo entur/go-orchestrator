@@ -88,7 +88,7 @@ func (so *MinimalSO) Handlers() []orchestrator.ManifestHandler {
 	return so.handlers
 }
 
-func NewMinimalSO(projectID string) *MinimalSO {
+func NewMinimalExampleSO(projectID string) *MinimalSO {
 	return &MinimalSO{
 		projectID: projectID,
 		handlers: []orchestrator.ManifestHandler{
@@ -97,21 +97,29 @@ func NewMinimalSO(projectID string) *MinimalSO {
 	}
 }
 
-//	func init() {
-//	    handler := orchestrator.NewEventHandler(so)
-//	    functions.CloudEvent("OrchestratorEvent", handler)
-//	}
-func ExampleMinimalSO() {
+// -----------------------
+// Minimal Sub-Orchestrator Example
+// -----------------------
 
-	so := NewMinimalSO("mysoproject")
+func ExampleMinimalSO() {
+	// Usually you would setup the sub-orchestrator inside an init function like so:
+	//
+	// 	func init() {
+	//			handler := orchestrator.NewEventHandler(so)
+	//	    	functions.CloudEvent("OrchestratorEvent", handler)
+	//	}
+	//
+	// However, here we are configuring and executing it as part of an example test.
+
+	so := NewMinimalExampleSO("mysoproject")
 
 	manifest := MinimalManifest{
-		Spec: MinimalSpec{
-			Name: "Test Name",
-		},
 		ManifestHeader: orchestrator.ManifestHeader{
 			ApiVersion: so.handlers[0].ApiVersion(),
 			Kind:       so.handlers[0].Kind(),
+		},
+		Spec: MinimalSpec{
+			Name: "Test Name",
 		},
 	}
 
