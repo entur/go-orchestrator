@@ -192,6 +192,7 @@ func Example() {
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
+	
 	// Output:
 	// DBG Created a new EventHandler
 	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
