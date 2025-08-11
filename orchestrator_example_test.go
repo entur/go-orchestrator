@@ -22,7 +22,7 @@ type ExampeMetadataV1 struct {
 type ExampleManifestV1 struct {
 	orchestrator.ManifestHeader
 	Metadata ExampeMetadataV1 `json:"metadata"`
-	Spec ExampleSpecV1 `json:"spec"`
+	Spec     ExampleSpecV1    `json:"spec"`
 }
 
 type ExampleManifestV1Handler struct {
@@ -38,7 +38,10 @@ func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind {
 }
 
 func (h *ExampleManifestV1Handler) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	fmt.Println("After Orchestrator middleware executes, but before manifest handler executes")
+	logger := logging.Ctx(ctx)
+
+	logger.Info().Msg("After Orchestrator middleware executes, but before manifest handler executes")
+
 	return nil
 }
 
@@ -93,9 +96,16 @@ func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
 }
 
 func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	fmt.Println("Before it begins")
+	logger := logging.Ctx(ctx)
+
+	logger.Info().Msg("Before it begins")
+	if req.Origin.Repository.Visibility != orchestrator.GitRepositoryVisbilityPublic {
+		r.Done("This sub-orchestrator only accepts manifests in public repositories", false)
+		return nil
+	}
+
 	if req.Sender.Type == orchestrator.SenderTypeUser {
-		fmt.Println("#####")
+		logger.Info().Msg("#####")
 		client, err := resources.NewIAMLookupClient(ctx, req.Resources.IAM.Url)
 		if err != nil {
 			return err
@@ -126,10 +136,10 @@ func (so ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request,
 	cache := orchestrator.CtxCache(ctx)
 	value := cache.Get("cache_key")
 	if str, ok := value.(string); ok {
-		fmt.Printf("Got value from cache: %s\n", str)
+		logger.Info().Msgf("Got value from cache: %s", str)
 	}
 
-	fmt.Println("After it's done")
+	logger.Info().Msg("After it's done")
 	return nil
 }
 
@@ -143,10 +153,19 @@ func NewExampleSO(projectID string) *ExampleSO {
 }
 
 // -----------------------
-// Minimal Sub-Orchestrator Example
+// Complex Sub-Orchestrator Example
 // -----------------------
 
 func Example() {
+	// Usually you would setup the sub-orchestrator inside an init function like so:
+	//
+	// 	func init() {
+	//			handler := orchestrator.NewEventHandler(so)
+	//	    	functions.CloudEvent("OrchestratorEvent", handler)
+	//	}
+	//
+	// However, here we are configuring and executing it as part of an example test.
+
 	writer := logging.NewConsoleWriter(logging.WithNoColor(), logging.WithNoTimestamp())
 	logger := logging.New(logging.WithWriter(writer))
 
@@ -192,21 +211,22 @@ func Example() {
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
+
 	// Output:
 	// DBG Created a new EventHandler
-	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"htmlUrl":""}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
+	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
 	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// Before it begins
-	// #####
+	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// After Orchestrator middleware executes, but before manifest handler executes
+	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing Orchestrator (mysoproject) MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// Got value from cache: something something!
-	// After it's done
+	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
 	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// ERR Encountered error error="no topic set, unable to respond"

@@ -61,12 +61,12 @@ This example creates a minimal orchestrator, using mostly default behavior. It h
 apiVersion: orchestrator.entur.io/example/v1
 kind: Example
 metadata:
-	id: someid
+    id: someid
 spec:
-	name: Some name
+    name: Some name
 ```
 
-See `./orchestrator_minimal_test.go` for a minimal test and implementation.
+See `./orchestrator_minimal_example_test.go` for a minimal test and implementation.
 
 ## Full example
 
@@ -84,9 +84,9 @@ The code is written in a way to make it clear that a future v2 may come and serv
 apiVersion: orchestrator.entur.io/example/v1
 kind: Example
 metadata:
-	id: someid
+    id: someid
 spec:
-	name: Some name
+    name: Some name
 ```
 
-See `./orchestrator_test.go` for a complete test and implementation.
+See `./orchestrator_example_test.go` for a complete test and implementation.

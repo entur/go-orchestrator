@@ -54,8 +54,21 @@ const (
 	ActionDestroy     Action = "destroy"
 )
 
+type GitRepositoryVisibility string
+
+const (
+	GitRepositoryVisbilityPublic   GitRepositoryVisibility = "public"
+	GitRepositoryVisbilityInternal GitRepositoryVisibility = "internal"
+	GitRepositoryVisbilityPrivate  GitRepositoryVisibility = "private"
+)
+
 type GitRepository struct {
-	HtmlUrl string `json:"htmlUrl"`
+	ID            int                     `json:"id"`            // E.g. '123123145'
+	Name          string                  `json:"name"`          // E.g. 'some-remo'
+	FullName      string                  `json:"fullName"`      // E.g. 'entur/some-repo'
+	DefaultBranch string                  `json:"defaultBranch"` // E.g. 'main'
+	HtmlUrl       string                  `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
+	Visibility    GitRepositoryVisibility `json:"visibility"`    // E.g. 'public'
 }
 
 type Origin struct {
