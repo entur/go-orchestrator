@@ -22,7 +22,7 @@ type ExampeMetadataV1 struct {
 type ExampleManifestV1 struct {
 	orchestrator.ManifestHeader
 	Metadata ExampeMetadataV1 `json:"metadata"`
-	Spec ExampleSpecV1 `json:"spec"`
+	Spec     ExampleSpecV1    `json:"spec"`
 }
 
 type ExampleManifestV1Handler struct {
@@ -39,9 +39,9 @@ func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind {
 
 func (h *ExampleManifestV1Handler) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	logger := logging.Ctx(ctx)
-	
+
 	logger.Info().Msg("After Orchestrator middleware executes, but before manifest handler executes")
-	
+
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
 
 func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	logger := logging.Ctx(ctx)
-	
+
 	logger.Info().Msg("Before it begins")
 	if req.Origin.Repository.Visibility != orchestrator.GitRepositoryVisbilityPublic {
 		r.Done("This sub-orchestrator only accepts manifests in public repositories", false)
@@ -165,7 +165,7 @@ func Example() {
 	//	}
 	//
 	// However, here we are configuring and executing it as part of an example test.
-	
+
 	writer := logging.NewConsoleWriter(logging.WithNoColor(), logging.WithNoTimestamp())
 	logger := logging.New(logging.WithWriter(writer))
 

@@ -22,7 +22,7 @@ func NewMockRequest(manifest any, sender SenderType, action Action, opts ...Mock
 		Origin: Origin{
 			Repository: GitRepository{
 				DefaultBranch: "main",
-				Visibility: GitRepositoryVisbilityPublic,
+				Visibility:    GitRepositoryVisbilityPublic,
 			},
 		},
 		Sender: Sender{
