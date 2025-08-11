@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/entur/go-orchestrator/compare/v1.3.0...v1.4.0) (2025-08-11)
+
+
+### Features
+
+* Added support for new origin repository fields ([#51](https://github.com/entur/go-orchestrator/issues/51)) ([556aaab](https://github.com/entur/go-orchestrator/commit/556aaab443d92ee7d89e463354f9df1749a559d6))
+
 ## [1.3.0](https://github.com/entur/go-orchestrator/compare/v1.2.2...v1.3.0) (2025-06-04)
 
 
