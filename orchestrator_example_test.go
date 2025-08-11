@@ -99,6 +99,11 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 	logger := logging.Ctx(ctx)
 	
 	logger.Info().Msg("Before it begins")
+	if req.Origin.Repository.Visibility != orchestrator.GitRepositoryVisbilityPublic {
+		r.Done("This sub-orchestrator only accepts manifests in public repositories", false)
+		return nil
+	}
+
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
 		client, err := resources.NewIAMLookupClient(ctx, req.Resources.IAM.Url)
