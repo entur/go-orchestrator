@@ -53,7 +53,18 @@ Now
 go mod tidy
 ```
 
-## Minimal example
+## Run tests and examples
+
+This is a great way to get hacking! Simply modify the examples and play around.
+Change the expected output followed by `// Output:` to verify your expectations.
+
+```sh
+go test ./...
+go test orchestrator_minimal_example_test.go
+go test orchestrator_example_test.go
+```
+
+### Minimal example
 
 This example creates a minimal orchestrator, using mostly default behavior. It handles one kind and one version, here's the spec:
 
@@ -61,14 +72,14 @@ This example creates a minimal orchestrator, using mostly default behavior. It h
 apiVersion: orchestrator.entur.io/example/v1
 kind: Example
 metadata:
-    id: someid
+  id: someid
 spec:
-    name: Some name
+  name: Some name
 ```
 
 See `./orchestrator_minimal_example_test.go` for a minimal test and implementation.
 
-## Full example
+### Full example
 
 This example creates an orchestrator using most of the APIs in this SDK.
 
@@ -84,9 +95,9 @@ The code is written in a way to make it clear that a future v2 may come and serv
 apiVersion: orchestrator.entur.io/example/v1
 kind: Example
 metadata:
-    id: someid
+  id: someid
 spec:
-    name: Some name
+  name: Some name
 ```
 
 See `./orchestrator_example_test.go` for a complete test and implementation.

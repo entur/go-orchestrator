@@ -15,14 +15,14 @@ type ExampleSpecV1 struct {
 	Name string `json:"name"`
 }
 
-type ExampeMetadataV1 struct {
+type ExampleMetadataV1 struct {
 	ID string `json:"id"`
 }
 
 type ExampleManifestV1 struct {
 	orchestrator.ManifestHeader
-	Metadata ExampeMetadataV1 `json:"metadata"`
-	Spec     ExampleSpecV1    `json:"spec"`
+	Metadata ExampleMetadataV1 `json:"metadata"`
+	Spec     ExampleSpecV1     `json:"spec"`
 }
 
 type ExampleManifestV1Handler struct {
@@ -175,7 +175,7 @@ func Example() {
 		Spec: ExampleSpecV1{
 			Name: "Test Name",
 		},
-		Metadata: ExampeMetadataV1{
+		Metadata: ExampleMetadataV1{
 			ID: "manifestid",
 		},
 		ManifestHeader: orchestrator.ManifestHeader{

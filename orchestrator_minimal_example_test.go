@@ -23,8 +23,8 @@ type MinimalSpec struct {
 // spec: { name: Some Name }
 type MinimalManifest struct {
 	orchestrator.ManifestHeader
-	Metadata ExampeMetadataV1 `json:"metadata"`
-	Spec     MinimalSpec      `json:"spec"`
+	Metadata MinimalMetadata `json:"metadata"`
+	Spec     MinimalSpec     `json:"spec"`
 }
 
 type MinimalHandler struct {
