@@ -29,7 +29,7 @@ func NewMockRequest(manifest any, sender SenderType, action Action, opts ...Mock
 			Type: sender,
 		},
 		Action:        action,
-		ResponseTopic: "topic",
+		ResponseTopic: "mocktopic",
 		Manifest: Manifests{
 			Old: nil,
 			New: newManifest,

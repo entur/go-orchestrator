@@ -100,7 +100,7 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventH
 				Interface("gorch_result_creations", result.Creations()).
 				Interface("gorch_result_updates", result.Updates()).
 				Interface("gorch_result_deletions", result.Deletions()).
-				Msg("Encountered an internal error when processing request")
+				Msg("Encountered an internal error whilst processing request")
 		}
 
 		res := orchestrator.NewResponse(req.Metadata, result.Code(), result.String())
@@ -108,7 +108,7 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventH
 
 		err = orchestrator.Respond(ctx, publisher, res)
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error when responding to request")
+			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
 		}
 		return err
 	}
