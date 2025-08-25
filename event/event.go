@@ -2,10 +2,9 @@ package event
 
 import (
 	"context"
-	"strings"
 	"sync"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
@@ -16,47 +15,29 @@ import (
 // Helpers
 // -----------------------
 
-type topicCache struct {
+type publisherCache struct {
 	mu     sync.Mutex
 	client *pubsub.Client
-	topics map[string]*pubsub.Topic
+	publishers map[string]*pubsub.Publisher
 }
 
-func (c *topicCache) Topic(projectID string, topicID string) *pubsub.Topic {
+func (c *publisherCache) Publisher(name string) *pubsub.Publisher {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	key := projectID + topicID
-
-	topic, ok := c.topics[key]
+	publisher, ok := c.publishers[name]
 	if !ok {
-		topic = c.client.TopicInProject(topicID, projectID)
-		c.topics[key] = topic
+		publisher = c.client.Publisher(name)
+		c.publishers[name] = publisher
 	}
 
-	return topic
+	return publisher
 }
 
-func (c *topicCache) TopicFullID(id string) *pubsub.Topic {
-	if !strings.HasPrefix(id, "projects/") {
-		return nil
-	}
-
-	i := strings.Index(id[9:], "/")
-	if i == -1 {
-		return nil
-	}
-
-	projectID := id[9 : 9+i]
-	topicID := id[strings.LastIndex(id, "/")+1:]
-
-	return c.Topic(projectID, topicID)
-}
-
-func newTopicCache(client *pubsub.Client) *topicCache {
-	return &topicCache{
+func newPublisherCache(client *pubsub.Client) *publisherCache{
+	return &publisherCache{
 		client: client,
-		topics: map[string]*pubsub.Topic{},
+		publishers: map[string]*pubsub.Publisher{},
 	}
 }
 
@@ -92,7 +73,7 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventH
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
-	cache := newTopicCache(client)
+	cache := newPublisherCache(client)
 
 	parentLogger.Debug().Msg("Created a new EventHandler")
 	return func(ctx context.Context, e cloudevent.Event) error {
@@ -119,15 +100,15 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventH
 				Interface("gorch_result_creations", result.Creations()).
 				Interface("gorch_result_updates", result.Updates()).
 				Interface("gorch_result_deletions", result.Deletions()).
-				Msg("Encountered an internal error whilst processing request")
+				Msg("Encountered an internal error when processing request")
 		}
 
 		res := orchestrator.NewResponse(req.Metadata, result.Code(), result.String())
-		topic := cache.TopicFullID(req.ResponseTopic)
+		publisher := cache.Publisher(req.ResponseTopic)
 
-		err = orchestrator.Respond(ctx, topic, res)
+		err = orchestrator.Respond(ctx, publisher, res)
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
+			logger.Error().Err(err).Msg("Encountered an internal error when responding to request")
 		}
 		return err
 	}

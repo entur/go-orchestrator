@@ -99,14 +99,14 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 	logger := logging.Ctx(ctx)
 
 	logger.Info().Msg("Before it begins")
-	if req.Origin.Repository.Visibility != orchestrator.GitRepositoryVisbilityPublic {
+	if req.Origin.Repository.Visibility != orchestrator.RepositoryVisbilityPublic {
 		r.Done("This sub-orchestrator only accepts manifests in public repositories", false)
 		return nil
 	}
 
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
-		client, err := resources.NewIAMLookupClient(ctx, req.Resources.IAM.Url)
+		client, err := resources.NewIAMClient(ctx, req.Resources.IAM.Url)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 	}
 
 	// The cache is shared between middlewares and handlers!
-	cache := orchestrator.CtxCache(ctx)
+	cache := orchestrator.Ctx(ctx)
 	cache.Set("cache_key", "something something!")
 
 	return nil
@@ -133,7 +133,7 @@ func (so ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request,
 	logger := logging.Ctx(ctx)
 	logger.Info().Msg("Auditing this thing")
 
-	cache := orchestrator.CtxCache(ctx)
+	cache := orchestrator.Ctx(ctx)
 	value := cache.Get("cache_key")
 	if str, ok := value.(string); ok {
 		logger.Info().Msgf("Got value from cache: %s", str)
@@ -184,7 +184,7 @@ func Example() {
 		},
 	}
 
-	iamServer, _ := resources.NewMockIAMLookupServer(
+	iamServer, _ := resources.NewMockIAMServer(
 		resources.WithPort(8001),
 		resources.WithUserProjectRoles(
 			orchestrator.MockUserEmail,
@@ -219,7 +219,7 @@ func Example() {
 	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAM gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
 	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId

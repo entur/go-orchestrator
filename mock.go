@@ -20,9 +20,9 @@ func NewMockRequest(manifest any, sender SenderType, action Action, opts ...Mock
 			RequestID: "mockid",
 		},
 		Origin: Origin{
-			Repository: GitRepository{
+			Repository: Repository{
 				DefaultBranch: "main",
-				Visibility:    GitRepositoryVisbilityPublic,
+				Visibility:    RepositoryVisbilityPublic,
 			},
 		},
 		Sender: Sender{
