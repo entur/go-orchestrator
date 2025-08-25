@@ -132,5 +132,5 @@ func ExampleMinimalSO() {
 		fmt.Println(err)
 	}
 	// Output:
-	// no topic set, unable to respond
+	// rpc error: code = NotFound desc = Resource not found (resource=mocktopic).
 }

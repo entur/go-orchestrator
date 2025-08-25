@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/entur/go-logging"
 )
 
@@ -39,10 +39,10 @@ type Resource struct {
 	Url string `json:"url"`
 }
 
-type ResourceIAMLookup = Resource
+type ResourceIAM = Resource
 
 type Resources struct {
-	IAM ResourceIAMLookup `json:"iamLookup"`
+	IAM ResourceIAM `json:"iamLookup"`
 }
 
 type Action string
@@ -54,26 +54,26 @@ const (
 	ActionDestroy     Action = "destroy"
 )
 
-type GitRepositoryVisibility string
+type RepositoryVisibility string
 
 const (
-	GitRepositoryVisbilityPublic   GitRepositoryVisibility = "public"
-	GitRepositoryVisbilityInternal GitRepositoryVisibility = "internal"
-	GitRepositoryVisbilityPrivate  GitRepositoryVisibility = "private"
+	RepositoryVisbilityPublic   RepositoryVisibility = "public"
+	RepositoryVisbilityInternal RepositoryVisibility = "internal"
+	RepositoryVisbilityPrivate  RepositoryVisibility = "private"
 )
 
-type GitRepository struct {
+type Repository struct {
 	ID            int                     `json:"id"`            // E.g. '123123145'
 	Name          string                  `json:"name"`          // E.g. 'some-remo'
 	FullName      string                  `json:"fullName"`      // E.g. 'entur/some-repo'
 	DefaultBranch string                  `json:"defaultBranch"` // E.g. 'main'
 	HtmlUrl       string                  `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
-	Visibility    GitRepositoryVisibility `json:"visibility"`    // E.g. 'public'
+	Visibility    RepositoryVisibility `json:"visibility"`    // E.g. 'public'
 }
 
 type Origin struct {
 	FileName   string        `json:"fileName"`
-	Repository GitRepository `json:"repository"`
+	Repository Repository `json:"repository"`
 }
 
 type SenderType string
@@ -257,7 +257,7 @@ func (r *Result) String() string {
 	builder.WriteString(r.summary)
 	builder.WriteString("\n")
 	if len(r.creations) > 0 {
-		builder.WriteString("Created:\n")
+		builder.WriteString("Create:\n")
 		for _, created := range r.creations {
 			builder.WriteString("+ ")
 			builder.WriteString(created)
@@ -265,7 +265,7 @@ func (r *Result) String() string {
 		}
 	}
 	if len(r.updates) > 0 {
-		builder.WriteString("Updated:\n")
+		builder.WriteString("Update:\n")
 		for _, updated := range r.updates {
 			builder.WriteString("! ")
 			builder.WriteString(updated)
@@ -273,7 +273,7 @@ func (r *Result) String() string {
 		}
 	}
 	if len(r.deletions) > 0 {
-		builder.WriteString("Deleted:\n")
+		builder.WriteString("Delete:\n")
 		for _, deleted := range r.deletions {
 			builder.WriteString("- ")
 			builder.WriteString(deleted)
@@ -427,12 +427,12 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 	return result
 }
 
-func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
+func Respond(ctx context.Context, publisher *pubsub.Publisher, res Response) error {
 	logger := logging.Ctx(ctx)
 	logger.Info().Interface("gorch_response", res).Msg("Sending response")
 
-	if topic == nil {
-		return fmt.Errorf("no topic set, unable to respond")
+	if publisher == nil {
+		return fmt.Errorf("no publisher set, unable to respond")
 	}
 
 	enc, err := json.Marshal(res)
@@ -440,15 +440,16 @@ func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
 		return err
 	}
 
-	result := topic.Publish(ctx, &pubsub.Message{
+	result := publisher.Publish(ctx, &pubsub.Message{
 		Data: enc,
 	})
+
 	_, err = result.Get(ctx)
 	return err
 }
 
 // Retrieve the cache attached to the current request context
-func CtxCache(ctx context.Context) contextCache {
+func Ctx(ctx context.Context) contextCache {
 	v := ctx.Value(ctxKey{})
 	if v == nil {
 		return newContextCache()

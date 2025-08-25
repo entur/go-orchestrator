@@ -8,8 +8,6 @@ import (
 	"github.com/entur/go-orchestrator"
 )
 
-const MockUserEmail = orchestrator.MockUserEmail
-
 type MockEventOption = orchestrator.MockRequestOption
 
 func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestrator.Action, opts ...MockEventOption) (*cloudevent.Event, error) {
