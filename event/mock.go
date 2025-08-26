@@ -10,8 +10,8 @@ import (
 
 type MockEventOption = orchestrator.MockRequestOption
 
-func NewMockEvent(manifest any, sender orchestrator.SenderType, action orchestrator.Action, opts ...MockEventOption) (*cloudevent.Event, error) {
-	req, err := orchestrator.NewMockRequest(manifest, sender, action, opts...)
+func NewMockEvent(action orchestrator.Action, manifest any, opts ...MockEventOption) (*cloudevent.Event, error) {
+	req, err := orchestrator.NewMockRequest(action, manifest, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -112,6 +112,7 @@ func ExampleMinimalSO() {
 	// However, here we are configuring and executing it as part of an example test.
 
 	so := NewMinimalExampleSO("mysoproject")
+	handler := event.NewEventHandler(so)
 
 	manifest := MinimalManifest{
 		ManifestHeader: orchestrator.ManifestHeader{
@@ -122,10 +123,8 @@ func ExampleMinimalSO() {
 			Name: "Test Name",
 		},
 	}
-
-	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
-	handler := event.NewEventHandler(so)
-
+	
+	e, _ := event.NewMockEvent(orchestrator.ActionPlan, manifest)
 	err := handler(context.Background(), *e)
 
 	if err != nil {

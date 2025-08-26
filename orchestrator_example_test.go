@@ -166,23 +166,14 @@ func Example() {
 	//
 	// However, here we are configuring and executing it as part of an example test.
 
-	writer := logging.NewConsoleWriter(logging.WithNoColor(), logging.WithNoTimestamp())
-	logger := logging.New(logging.WithWriter(writer))
-
-	so := NewExampleSO("mysoproject")
-
-	manifest := ExampleManifestV1{
-		Spec: ExampleSpecV1{
-			Name: "Test Name",
-		},
-		Metadata: ExampleMetadataV1{
-			ID: "manifestid",
-		},
-		ManifestHeader: orchestrator.ManifestHeader{
-			ApiVersion: so.handlers[0].ApiVersion(),
-			Kind:       so.handlers[0].Kind(),
-		},
-	}
+	logger := logging.New(
+		logging.WithWriter(
+			logging.NewConsoleWriter(
+				logging.WithNoColor(), 
+				logging.WithNoTimestamp(),
+			),
+		),
+	)
 
 	iamServer, _ := resources.NewMockIAMServer(
 		resources.WithPort(8001),
@@ -196,16 +187,28 @@ func Example() {
 	iamServer.Start()
 	defer iamServer.Stop()
 
+	so := NewExampleSO("mysoproject")
+	handler := event.NewEventHandler(so, event.WithCustomLogger(logger))
+
+	manifest := ExampleManifestV1{
+		ManifestHeader: orchestrator.ManifestHeader{
+			ApiVersion: so.handlers[0].ApiVersion(),
+			Kind:       so.handlers[0].Kind(),
+		},
+		Spec: ExampleSpecV1{
+			Name: "Test Name",
+		},
+		Metadata: ExampleMetadataV1{
+			ID: "manifestid",
+		},
+	}
+
 	// Optional modifier of your mockevent
 	mockEventModifier := func(r *orchestrator.Request) {
-		r.Metadata.RequestID = "ExampleId"
 		r.Resources.IAM.Url = iamServer.Url()
 	}
 
-	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
-	handler := event.NewEventHandler(so, event.WithCustomLogger(logger))
-	// functions.CloudEvent("OrchestratorEvent", handler)
-
+	e, _ := event.NewMockEvent(orchestrator.ActionPlan, manifest, mockEventModifier)
 	err := handler(context.Background(), *e)
 
 	if err != nil {
@@ -214,20 +217,20 @@ func Example() {
 
 	// Output:
 	// DBG Created a new EventHandler
-	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
-	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAM gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing Orchestrator (mysoproject) MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGU6CisgQSB0aGluZwpVcGRhdGU6CiEgQSB0aGluZwpEZWxldGU6Ci0gQSB0aGluZwo=","result":"success"}
-	// ERR Encountered an internal error whilst responding to request error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)." gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
+	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=mockid
+	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAM gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing Orchestrator (mysoproject) MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"mockid"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGU6CisgQSB0aGluZwpVcGRhdGU6CiEgQSB0aGluZwpEZWxldGU6Ci0gQSB0aGluZwo=","result":"success"}
+	// ERR Encountered an internal error whilst responding to request error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)." gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// ERR Encountered error error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)."
 }

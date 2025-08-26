@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 )
 
+const MockRequestID = "mockid"
+const MockResponseTopic = "mocktopic"
+const MockDefaultBranch = "main"
 const MockUserEmail = "mockuser@entur.io"
 
 type MockRequestOption func(*Request)
 
-func NewMockRequest(manifest any, sender SenderType, action Action, opts ...MockRequestOption) (*Request, error) {
+func NewMockRequest(action Action, manifest any, opts ...MockRequestOption) (*Request, error) {
 	newManifest, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err
@@ -17,26 +20,24 @@ func NewMockRequest(manifest any, sender SenderType, action Action, opts ...Mock
 	req := &Request{
 		ApiVersion: "orchestrator.entur.io/request/v1",
 		Metadata: OuterMetadata{
-			RequestID: "mockid",
+			RequestID: MockRequestID,
 		},
 		Origin: Origin{
 			Repository: Repository{
-				DefaultBranch: "main",
+				DefaultBranch: MockDefaultBranch,
 				Visibility:    RepositoryVisbilityPublic,
 			},
 		},
 		Sender: Sender{
-			Type: sender,
+			Type: SenderTypeUser,
+			Email: MockUserEmail,
 		},
 		Action:        action,
-		ResponseTopic: "mocktopic",
+		ResponseTopic: MockResponseTopic,
 		Manifest: Manifests{
 			Old: nil,
 			New: newManifest,
 		},
-	}
-	if sender == SenderTypeUser {
-		req.Sender.Email = MockUserEmail
 	}
 
 	for _, opt := range opts {

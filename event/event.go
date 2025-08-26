@@ -21,14 +21,21 @@ type publisherCache struct {
 	publishers map[string]*pubsub.Publisher
 }
 
-func (c *publisherCache) Publisher(name string) *pubsub.Publisher {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (cache *publisherCache) Publisher(name string) *pubsub.Publisher {
+	/* How to handle missing default credentials?
+	// TODO
+	if cache.client == nil {
+		//return nil
+	}
+	*/
+	
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
 
-	publisher, ok := c.publishers[name]
+	publisher, ok := cache.publishers[name]
 	if !ok {
-		publisher = c.client.Publisher(name)
-		c.publishers[name] = publisher
+		publisher = cache.client.Publisher(name)
+		cache.publishers[name] = publisher
 	}
 
 	return publisher
@@ -57,9 +64,7 @@ func WithCustomLogger(logger zerolog.Logger) HandlerOption {
 	}
 }
 
-type EventHandler func(context.Context, cloudevent.Event) error
-
-func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventHandler {
+func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) func(context.Context, cloudevent.Event) error {
 	cfg := &HandlerConfig{}
 	for _, opt := range opts {
 		opt(cfg)
@@ -73,6 +78,15 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) EventH
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
+	/* TODO:
+	// Client creation will cause an error if no default credential can be found
+	if err != nil {
+		errStr := err.Error()
+		if !strings.HasPrefix(errStr, "pubsub(publisher): credentials: could not find default credentials.") {
+			parentLogger.Panic().Err(err).Msg("Failed to create underlying pubsub client")
+		}
+	} 
+	*/
 	cache := newPublisherCache(client)
 
 	parentLogger.Debug().Msg("Created a new EventHandler")
