@@ -178,7 +178,7 @@ func Example() {
 	iamServer, _ := resources.NewMockIAMServer(
 		resources.WithPort(8001),
 		resources.WithUserProjectRoles(
-			orchestrator.MockUserEmail,
+			orchestrator.DefaultMockUserEmail,
 			"ent-someproject-dev",
 			[]string{"your_so_role"},
 		),
@@ -202,15 +202,9 @@ func Example() {
 			ID: "manifestid",
 		},
 	}
-
-	// Optional modifier of your mockevent
-	mockEventModifier := func(r *orchestrator.Request) {
-		r.Resources.IAM.Url = iamServer.Url()
-	}
-
-	e, _ := event.NewMockEvent(orchestrator.ActionPlan, manifest, mockEventModifier)
+	e, _ := event.NewMockEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.Url()))
+	
 	err := handler(context.Background(), *e)
-
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")
 	}

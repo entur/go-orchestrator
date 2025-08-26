@@ -4,14 +4,35 @@ import (
 	"encoding/json"
 )
 
-const MockRequestID = "mockid"
-const MockResponseTopic = "mocktopic"
-const MockDefaultBranch = "main"
-const MockUserEmail = "mockuser@entur.io"
+const DefaultMockRequestID = "mockid"
+const DefaultMockResponseTopic = "mocktopic"
+const DefaultMockDefaultBranch = "main"
+const DefaultMockRepositoryVisibility = RepositoryVisbilityPublic
+const DefaultMockSenderType = SenderTypeUser
+const DefaultMockUserEmail = "mockuser@entur.io"
+const DefaultMockAction = ActionPlan
 
 type MockRequestOption func(*Request)
 
-func NewMockRequest(action Action, manifest any, opts ...MockRequestOption) (*Request, error) {
+func WithAction(action Action) MockRequestOption {
+	return func(req *Request) {
+		req.Action = action
+	}
+}
+
+func WithSender(sender Sender) MockRequestOption {
+	return func(req *Request) {
+		req.Sender = sender
+	}
+}
+
+func WithIAMEndpoint(url string) MockRequestOption {
+	return func(req *Request) {
+		req.Resources.IAM.Url = url
+	}
+}
+
+func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 	newManifest, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err
@@ -20,20 +41,20 @@ func NewMockRequest(action Action, manifest any, opts ...MockRequestOption) (*Re
 	req := &Request{
 		ApiVersion: "orchestrator.entur.io/request/v1",
 		Metadata: OuterMetadata{
-			RequestID: MockRequestID,
+			RequestID: DefaultMockRequestID,
 		},
 		Origin: Origin{
 			Repository: Repository{
-				DefaultBranch: MockDefaultBranch,
-				Visibility:    RepositoryVisbilityPublic,
+				DefaultBranch: DefaultMockDefaultBranch,
+				Visibility:    DefaultMockRepositoryVisibility,
 			},
 		},
 		Sender: Sender{
-			Type: SenderTypeUser,
-			Email: MockUserEmail,
+			Type: DefaultMockSenderType,
+			Email: DefaultMockUserEmail,
 		},
-		Action:        action,
-		ResponseTopic: MockResponseTopic,
+		Action:        DefaultMockAction,
+		ResponseTopic: DefaultMockResponseTopic,
 		Manifest: Manifests{
 			Old: nil,
 			New: newManifest,

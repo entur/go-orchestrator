@@ -12,43 +12,6 @@ import (
 )
 
 // -----------------------
-// Helpers
-// -----------------------
-
-type publisherCache struct {
-	mu     sync.Mutex
-	client *pubsub.Client
-	publishers map[string]*pubsub.Publisher
-}
-
-func (cache *publisherCache) Publisher(name string) *pubsub.Publisher {
-	/* How to handle missing default credentials?
-	// TODO
-	if cache.client == nil {
-		//return nil
-	}
-	*/
-	
-	cache.mu.Lock()
-	defer cache.mu.Unlock()
-
-	publisher, ok := cache.publishers[name]
-	if !ok {
-		publisher = cache.client.Publisher(name)
-		cache.publishers[name] = publisher
-	}
-
-	return publisher
-}
-
-func newPublisherCache(client *pubsub.Client) *publisherCache{
-	return &publisherCache{
-		client: client,
-		publishers: map[string]*pubsub.Publisher{},
-	}
-}
-
-// -----------------------
 // Handlers
 // -----------------------
 
@@ -78,16 +41,43 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) func(c
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
-	/* TODO:
-	// Client creation will cause an error if no default credential can be found
+	/*
+	TODO: Still need to figure out what to do here
 	if err != nil {
 		errStr := err.Error()
 		if !strings.HasPrefix(errStr, "pubsub(publisher): credentials: could not find default credentials.") {
 			parentLogger.Panic().Err(err).Msg("Failed to create underlying pubsub client")
 		}
+
+		//option.WithCredentialsJSON([]byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`)),
+
+		
+		os.Setenv("PUBSUB_EMULATOR_HOST", )
+
+		client, err = pubsub.NewClient(context.Background(), "", 
+			option.WithoutAuthentication(),
+			option.WithTelemetryDisabled(),
+			internaloption.SkipDialSettingsValidation(),
+			option.WithGRPCDialOption(
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			),
+		)
+		
+			option.WithAuthCredentials(auth.NewCredentials(&auth.CredentialsOptions{
+				JSON: []byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`),
+			})),
+
+		)
+		if err != nil {
+			return func(ctx context.Context, e cloudevent.Event) error {
+				return err
+			}
+		}
 	} 
 	*/
-	cache := newPublisherCache(client)
+
+	mu := sync.Mutex{}
+	publishers := map[string]*pubsub.Publisher{}
 
 	parentLogger.Debug().Msg("Created a new EventHandler")
 	return func(ctx context.Context, e cloudevent.Event) error {
@@ -117,9 +107,16 @@ func NewEventHandler(so orchestrator.Orchestrator, opts ...HandlerOption) func(c
 				Msg("Encountered an internal error whilst processing request")
 		}
 
-		res := orchestrator.NewResponse(req.Metadata, result.Code(), result.String())
-		publisher := cache.Publisher(req.ResponseTopic)
+		mu.Lock()
+		topic := req.ResponseTopic
+		publisher, ok := publishers[topic]
+		if !ok {
+			publisher = client.Publisher(topic)
+			publishers[topic] = publisher
+		}
+		mu.Unlock()
 
+		res := orchestrator.NewResponse(req.Metadata, result.Code(), result.Output())
 		err = orchestrator.Respond(ctx, publisher, res)
 		if err != nil {
 			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")

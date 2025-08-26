@@ -123,10 +123,9 @@ func ExampleMinimalSO() {
 			Name: "Test Name",
 		},
 	}
+	e, _ := event.NewMockEvent(manifest)
 	
-	e, _ := event.NewMockEvent(orchestrator.ActionPlan, manifest)
 	err := handler(context.Background(), *e)
-
 	if err != nil {
 		fmt.Println(err)
 	}

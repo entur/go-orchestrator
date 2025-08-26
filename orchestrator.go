@@ -241,7 +241,7 @@ func (r *Result) Code() ResultCode {
 	return ResultCodeSuccess
 }
 
-func (r *Result) String() string {
+func (r *Result) Output() string {
 	if r.errs != nil || !r.done {
 		return "Internal error"
 	}
@@ -258,25 +258,25 @@ func (r *Result) String() string {
 	builder.WriteString("\n")
 	if len(r.creations) > 0 {
 		builder.WriteString("Create:\n")
-		for _, created := range r.creations {
+		for _, create := range r.creations {
 			builder.WriteString("+ ")
-			builder.WriteString(created)
+			builder.WriteString(create)
 			builder.WriteString("\n")
 		}
 	}
 	if len(r.updates) > 0 {
 		builder.WriteString("Update:\n")
-		for _, updated := range r.updates {
+		for _, update := range r.updates {
 			builder.WriteString("! ")
-			builder.WriteString(updated)
+			builder.WriteString(update)
 			builder.WriteString("\n")
 		}
 	}
 	if len(r.deletions) > 0 {
 		builder.WriteString("Delete:\n")
-		for _, deleted := range r.deletions {
+		for _, delete := range r.deletions {
 			builder.WriteString("- ")
-			builder.WriteString(deleted)
+			builder.WriteString(delete)
 			builder.WriteString("\n")
 		}
 	}
@@ -325,7 +325,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 
 	before, ok := so.(MiddlewareBefore)
 	if ok {
-		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareBefore", project)
+		logger.Debug().Msgf("Executing Orchestrator MiddlewareBefore (%s)", project)
 		err = before.MiddlewareBefore(ctx, *req, res)
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (before): %w", err)
@@ -337,10 +337,10 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 
 	before, ok = h.(MiddlewareBefore)
 	if ok {
-		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s) MiddlewareBefore", version, kind, action)
+		logger.Debug().Msgf("Executing ManifestHandler MiddlewareBefore (%s, %s, %s)", version, kind, action)
 		err = before.MiddlewareBefore(ctx, *req, res)
 		if err != nil {
-			return fmt.Errorf("handler middleware (before): %w", err)
+			return fmt.Errorf("manifesthandler middleware (before): %w", err)
 		}
 		if res.done {
 			return nil
@@ -362,15 +362,15 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 	}
 
 	if err != nil {
-		return fmt.Errorf("manifest handler (%s, %s, %s): %w", version, kind, action, err)
+		return fmt.Errorf("manifesthandler (%s, %s, %s): %w", version, kind, action, err)
 	}
 
 	after, ok := h.(MiddlewareAfter)
 	if ok {
-		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s) MiddlewareAfter", version, kind, action)
+		logger.Debug().Msgf("Executing ManifestHandler MiddlewareAfter (%s, %s, %s)", version, kind, action)
 		err = after.MiddlewareAfter(ctx, *req, res)
 		if err != nil {
-			return fmt.Errorf("handler middleware (after): %w", err)
+			return fmt.Errorf("manifesthandler middleware (after): %w", err)
 		}
 		if res.done {
 			return nil
@@ -379,7 +379,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 
 	after, ok = so.(MiddlewareAfter)
 	if ok {
-		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareAfter", project)
+		logger.Debug().Msgf("Executing Orchestrator MiddlewareAfter (%s)", project)
 		err = after.MiddlewareAfter(ctx, *req, res)
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (after): %w", err)
