@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/event"
 )
 
 type MinimalMetadata struct {
@@ -112,7 +111,7 @@ func ExampleMinimalSO() {
 	// However, here we are configuring and executing it as part of an example test.
 
 	so := NewMinimalExampleSO("mysoproject")
-	handler := event.NewEventHandler(so)
+	handler := orchestrator.NewCloudEventHandler(so)
 
 	manifest := MinimalManifest{
 		ManifestHeader: orchestrator.ManifestHeader{
@@ -123,7 +122,7 @@ func ExampleMinimalSO() {
 			Name: "Test Name",
 		},
 	}
-	e, _ := event.NewMockEvent(manifest)
+	e, _ := orchestrator.NewMockCloudEvent(manifest)
 	
 	err := handler(context.Background(), *e)
 	if err != nil {

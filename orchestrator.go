@@ -5,12 +5,29 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
-	"cloud.google.com/go/pubsub/v2"
+	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 	"github.com/entur/go-logging"
 )
+
+// -----------------------
+// GCP Cloud Event
+// -----------------------
+
+type PubSubMessageAttributes struct{}
+
+type PubSubMessage struct {
+	ID          string                  `json:"messageId"`
+	PublishTime string                  `json:"publishTime"`
+	Attributes  PubSubMessageAttributes `json:"attributes"`
+	Data        []byte                  `json:"data"`
+}
+
+type CloudEventData struct {
+	Subscription string
+	Message      PubSubMessage
+}
 
 // -----------------------
 // Platform Orchestrator
@@ -112,6 +129,22 @@ type Request struct {
 	Manifest      Manifests     `json:"manifest"`
 }
 
+func NewRequest(e cloudevent.Event) (*Request, error) {
+	var data CloudEventData
+	err := e.DataAs(&data)
+	if err != nil {
+		return nil, err
+	}
+
+	var req Request
+	err = json.Unmarshal(data.Message.Data, &req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &req, nil
+}
+
 type Response struct {
 	ApiVersion string        `json:"apiVersion"`
 	Metadata   OuterMetadata `json:"metadata"`
@@ -119,8 +152,8 @@ type Response struct {
 	Output     string        `json:"output"`
 }
 
-func NewResponse(metadata OuterMetadata, code ResultCode, msg string) Response {
-	return Response{
+func NewResponse(metadata OuterMetadata, code ResultCode, msg string) *Response {
+	return &Response{
 		ApiVersion: "orchestrator.entur.io/response/v1",
 		Metadata:   metadata,
 		ResultCode: code,
@@ -282,178 +315,4 @@ func (r *Result) Output() string {
 	}
 
 	return builder.String()
-}
-
-// -----------------------
-// Processing
-// -----------------------
-
-type contextCache struct {
-	values map[string]any
-}
-
-func (c contextCache) Get(key string) any {
-	v, ok := c.values[key]
-	if !ok {
-		return nil
-	}
-	return v
-}
-
-func (c contextCache) Set(key string, value any) {
-	c.values[key] = value
-}
-
-func newContextCache() contextCache {
-	return contextCache{
-		values: map[string]any{},
-	}
-}
-
-type ctxKey struct{}
-
-func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Request, res *Result) error {
-	var err error
-
-	ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
-	logger := logging.Ctx(ctx)
-
-	project := so.ProjectID()
-	version := h.ApiVersion()
-	kind := h.Kind()
-	action := req.Action
-
-	before, ok := so.(MiddlewareBefore)
-	if ok {
-		logger.Debug().Msgf("Executing Orchestrator MiddlewareBefore (%s)", project)
-		err = before.MiddlewareBefore(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("orchestrator middleware (before): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	before, ok = h.(MiddlewareBefore)
-	if ok {
-		logger.Debug().Msgf("Executing ManifestHandler MiddlewareBefore (%s, %s, %s)", version, kind, action)
-		err = before.MiddlewareBefore(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("manifesthandler middleware (before): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s)", version, kind, action)
-	switch req.Action {
-	case ActionApply:
-		err = h.Apply(ctx, *req, res)
-	case ActionPlan:
-		err = h.Plan(ctx, *req, res)
-	case ActionPlanDestroy:
-		err = h.PlanDestroy(ctx, *req, res)
-	case ActionDestroy:
-		err = h.Destroy(ctx, *req, res)
-	default:
-		err = fmt.Errorf("invalid action")
-	}
-
-	if err != nil {
-		return fmt.Errorf("manifesthandler (%s, %s, %s): %w", version, kind, action, err)
-	}
-
-	after, ok := h.(MiddlewareAfter)
-	if ok {
-		logger.Debug().Msgf("Executing ManifestHandler MiddlewareAfter (%s, %s, %s)", version, kind, action)
-		err = after.MiddlewareAfter(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("manifesthandler middleware (after): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	after, ok = so.(MiddlewareAfter)
-	if ok {
-		logger.Debug().Msgf("Executing Orchestrator MiddlewareAfter (%s)", project)
-		err = after.MiddlewareAfter(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("orchestrator middleware (after): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	if !res.done {
-		return fmt.Errorf("forgot to call .Done() in manifest handler (%s, %s, %s)", version, kind, action)
-	}
-
-	return nil
-}
-
-func Receive(ctx context.Context, so Orchestrator, req Request) Result {
-	logger := logging.Ctx(ctx)
-	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
-
-	var result Result
-	var header ManifestHeader
-
-	err := json.Unmarshal(req.Manifest.New, &header)
-	if err != nil {
-		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
-	} else {
-		match := false
-
-		for _, h := range so.Handlers() {
-			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
-				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.ApiVersion, header.Kind)
-				err = process(ctx, so, h, &req, &result)
-				match = true
-				break
-			}
-		}
-
-		if !match {
-			err = fmt.Errorf("no matching ManifestHandler for (%s, %s)", header.ApiVersion, header.Kind)
-		}
-	}
-
-	result.errs = errors.Join(result.errs, err)
-	return result
-}
-
-func Respond(ctx context.Context, publisher *pubsub.Publisher, res Response) error {
-	logger := logging.Ctx(ctx)
-	logger.Info().Interface("gorch_response", res).Msg("Sending response")
-
-	if publisher == nil {
-		return fmt.Errorf("no publisher set, unable to respond")
-	}
-
-	enc, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
-
-	result := publisher.Publish(ctx, &pubsub.Message{
-		Data: enc,
-	})
-
-	_, err = result.Get(ctx)
-	return err
-}
-
-// Retrieve the cache attached to the current request context
-func Ctx(ctx context.Context) contextCache {
-	v := ctx.Value(ctxKey{})
-	if v == nil {
-		return newContextCache()
-	}
-	c, _ := v.(contextCache)
-	return c
 }
