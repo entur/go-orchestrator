@@ -53,7 +53,7 @@ func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 			},
 		},
 		Sender: Sender{
-			Type: DefaultMockSenderType,
+			Type:  DefaultMockSenderType,
 			Email: DefaultMockUserEmail,
 		},
 		Action:        DefaultMockAction,

@@ -14,7 +14,7 @@ import (
 )
 
 // -----------------------
-// Processing
+// Core Process
 // -----------------------
 
 type contextCache struct {
@@ -187,7 +187,6 @@ func Ctx(ctx context.Context) contextCache {
 	return c
 }
 
-
 // -----------------------
 // Handlers
 // -----------------------
@@ -219,44 +218,44 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
 	/*
-	TODO: Still need to figure out what to do here
-	if err != nil {
-		errStr := err.Error()
-		if !strings.HasPrefix(errStr, "pubsub(publisher): credentials: could not find default credentials.") {
-			parentLogger.Panic().Err(err).Msg("Failed to create underlying pubsub client")
-		}
-
-		//option.WithCredentialsJSON([]byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`)),
-
-		
-		os.Setenv("PUBSUB_EMULATOR_HOST", )
-
-		client, err = pubsub.NewClient(context.Background(), "", 
-			option.WithoutAuthentication(),
-			option.WithTelemetryDisabled(),
-			internaloption.SkipDialSettingsValidation(),
-			option.WithGRPCDialOption(
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-			),
-		)
-		
-			option.WithAuthCredentials(auth.NewCredentials(&auth.CredentialsOptions{
-				JSON: []byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`),
-			})),
-
-		)
+		TODO: Still need to figure out what to do here
 		if err != nil {
-			return func(ctx context.Context, e cloudevent.Event) error {
-				return err
+			errStr := err.Error()
+			if !strings.HasPrefix(errStr, "pubsub(publisher): credentials: could not find default credentials.") {
+				parentLogger.Panic().Err(err).Msg("Failed to create underlying pubsub client")
+			}
+
+			//option.WithCredentialsJSON([]byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`)),
+
+
+			os.Setenv("PUBSUB_EMULATOR_HOST", )
+
+			client, err = pubsub.NewClient(context.Background(), "",
+				option.WithoutAuthentication(),
+				option.WithTelemetryDisabled(),
+				internaloption.SkipDialSettingsValidation(),
+				option.WithGRPCDialOption(
+					grpc.WithTransportCredentials(insecure.NewCredentials()),
+				),
+			)
+
+				option.WithAuthCredentials(auth.NewCredentials(&auth.CredentialsOptions{
+					JSON: []byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`),
+				})),
+
+			)
+			if err != nil {
+				return func(ctx context.Context, e cloudevent.Event) error {
+					return err
+				}
 			}
 		}
-	} 
 	*/
 
 	mu := sync.Mutex{}
 	publishers := map[string]*pubsub.Publisher{}
 
-	parentLogger.Debug().Msg("Created a new EventHandler")
+	parentLogger.Debug().Msg("Created a new CloudEventHandler")
 	return func(ctx context.Context, e cloudevent.Event) error {
 		logger := parentLogger.With().Logger()
 

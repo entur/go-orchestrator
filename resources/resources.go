@@ -160,6 +160,8 @@ func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IA
 
 	client, err := idtoken.NewClient(ctx, url, opts...)
 	if err != nil {
+		// TODO:
+		// Check if we can standardize the behavior of this
 		errStr := err.Error()
 		if !strings.HasPrefix(errStr, "idtoken: unsupported credentials type") && !strings.HasPrefix(errStr, "google: could not find default credentials") {
 			return nil, fmt.Errorf("unable to create iam client: %w", err)

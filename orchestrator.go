@@ -80,16 +80,16 @@ const (
 )
 
 type Repository struct {
-	ID            int                     `json:"id"`            // E.g. '123123145'
-	Name          string                  `json:"name"`          // E.g. 'some-remo'
-	FullName      string                  `json:"fullName"`      // E.g. 'entur/some-repo'
-	DefaultBranch string                  `json:"defaultBranch"` // E.g. 'main'
-	HtmlUrl       string                  `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
+	ID            int                  `json:"id"`            // E.g. '123123145'
+	Name          string               `json:"name"`          // E.g. 'some-remo'
+	FullName      string               `json:"fullName"`      // E.g. 'entur/some-repo'
+	DefaultBranch string               `json:"defaultBranch"` // E.g. 'main'
+	HtmlUrl       string               `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
 	Visibility    RepositoryVisibility `json:"visibility"`    // E.g. 'public'
 }
 
 type Origin struct {
-	FileName   string        `json:"fileName"`
+	FileName   string     `json:"fileName"`
 	Repository Repository `json:"repository"`
 }
 

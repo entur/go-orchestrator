@@ -168,7 +168,7 @@ func Example() {
 	logger := logging.New(
 		logging.WithWriter(
 			logging.NewConsoleWriter(
-				logging.WithNoColor(), 
+				logging.WithNoColor(),
 				logging.WithNoTimestamp(),
 			),
 		),
@@ -202,7 +202,7 @@ func Example() {
 		},
 	}
 	e, _ := orchestrator.NewMockCloudEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.Url()))
-	
+
 	err := handler(context.Background(), *e)
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")

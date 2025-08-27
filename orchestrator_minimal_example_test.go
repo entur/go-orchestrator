@@ -123,11 +123,12 @@ func ExampleMinimalSO() {
 		},
 	}
 	e, _ := orchestrator.NewMockCloudEvent(manifest)
-	
+
 	err := handler(context.Background(), *e)
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	// Output:
 	// rpc error: code = NotFound desc = Resource not found (resource=mocktopic).
 }
