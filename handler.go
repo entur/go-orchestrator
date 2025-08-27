@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 )
 
 // -----------------------
-// Core Process
+// Internal
 // -----------------------
 
 type contextCache struct {
@@ -125,9 +126,29 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 	return nil
 }
 
-func Receive(ctx context.Context, so Orchestrator, req Request) Result {
+func respond(ctx context.Context, publisher *pubsub.Publisher, res *Response) error {
 	logger := logging.Ctx(ctx)
-	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
+	logger.Debug().Interface("gorch_response", res).Msg("Sending response")
+
+	enc, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+
+	publishResult := publisher.Publish(ctx, &pubsub.Message{
+		Data: enc,
+	})
+	_, err = publishResult.Get(ctx)
+	return err
+}
+
+// -----------------------
+// Core
+// -----------------------
+
+func Process(ctx context.Context, so Orchestrator, req *Request) Result {
+	logger := logging.Ctx(ctx)
+	logger.Debug().Interface("gorch_request", req).Msg("Processing request")
 
 	var result Result
 	var header ManifestHeader
@@ -141,7 +162,7 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 		for _, h := range so.Handlers() {
 			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
 				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.ApiVersion, header.Kind)
-				err = process(ctx, so, h, &req, &result)
+				err = process(ctx, so, h, req, &result)
 				match = true
 				break
 			}
@@ -152,32 +173,14 @@ func Receive(ctx context.Context, so Orchestrator, req Request) Result {
 		}
 	}
 
-	result.errs = errors.Join(result.errs, err)
+	if err != nil {
+		result.errs = append(result.errs, err)
+	}
+
 	return result
 }
 
-func Respond(ctx context.Context, publisher *pubsub.Publisher, res Response) error {
-	logger := logging.Ctx(ctx)
-	logger.Info().Interface("gorch_response", res).Msg("Sending response")
-
-	if publisher == nil {
-		return fmt.Errorf("no publisher set, unable to respond")
-	}
-
-	enc, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
-
-	result := publisher.Publish(ctx, &pubsub.Message{
-		Data: enc,
-	})
-
-	_, err = result.Get(ctx)
-	return err
-}
-
-// Retrieve the cache attached to the current request context
+// Retrieve the value cache attached to the current request context
 func Ctx(ctx context.Context) contextCache {
 	v := ctx.Value(ctxKey{})
 	if v == nil {
@@ -252,16 +255,18 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 		}
 	*/
 
-	mu := sync.Mutex{}
 	publishers := map[string]*pubsub.Publisher{}
+	mu := sync.Mutex{}
 
 	parentLogger.Debug().Msg("Created a new CloudEventHandler")
 	return func(ctx context.Context, e cloudevent.Event) error {
 		logger := parentLogger.With().Logger()
+		
+		var req Request
 
-		req, err := NewRequest(e)
+		err := UnmarshalCloudEvent(e, &req)
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error when calling ParseEvent")
+			logger.Error().Err(err).Msg("Encountered an internal error when unmarshalling CloudEvent")
 			return err
 		}
 
@@ -271,16 +276,20 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 				Str("gorch_file_name", req.Origin.FileName).
 				Str("gorch_action", string(req.Action))
 		})
-		ctx = logger.WithContext(ctx)
 
-		result := Receive(ctx, so, *req)
-		err = result.AccumulatedError()
-		if err != nil {
-			logger.Error().Stack().Err(err).
-				Interface("gorch_result_creations", result.Creations()).
-				Interface("gorch_result_updates", result.Updates()).
-				Interface("gorch_result_deletions", result.Deletions()).
-				Msg("Encountered an internal error whilst processing request")
+		ctx = logger.WithContext(ctx)
+		result := Process(ctx, so, &req)
+
+		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
+			return c.Interface("gorch_result_summary", result.summary).
+				Interface("gorch_result_creations", result.creations).
+				Interface("gorch_result_updates", result.updates).
+				Interface("gorch_result_deletions", result.deletions)
+		})
+
+		if errs := result.Errors(); len(errs) > 0 {
+			err = errors.Join(errs...)
+			logger.Error().Stack().Err(err).Msg("Encountered an internal error whilst processing request")
 		}
 
 		mu.Lock()
@@ -292,8 +301,14 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 		}
 		mu.Unlock()
 
-		res := NewResponse(req.Metadata, result.Code(), result.Output())
-		err = Respond(ctx, publisher, *res)
+		var res Response = Response{
+			ApiVersion: ApiVersionOrchestratorResponseV1,
+			Metadata:   req.Metadata,
+			ResultCode: result.Code(),
+			Output:     base64.StdEncoding.EncodeToString([]byte(result.Output())),
+		}
+
+		err = respond(ctx, publisher, &res)
 		if err != nil {
 			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
 		}

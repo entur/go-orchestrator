@@ -209,8 +209,8 @@ func Example() {
 	}
 
 	// Output:
-	// DBG Created a new EventHandler
-	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=mockid
+	// DBG Created a new CloudEventHandler
+	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=mockid
 	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// DBG Executing Orchestrator MiddlewareBefore (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
@@ -223,7 +223,7 @@ func Example() {
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"mockid"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGU6CisgQSB0aGluZwpVcGRhdGU6CiEgQSB0aGluZwpEZWxldGU6Ci0gQSB0aGluZwo=","result":"success"}
-	// ERR Encountered an internal error whilst responding to request error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)." gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_response={"apiVersion":"orchestrator.entur.io/request/v1","metadata":{"requestId":"mockid"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGU6CisgQSB0aGluZwpVcGRhdGU6CiEgQSB0aGluZwpEZWxldGU6Ci0gQSB0aGluZwo=","result":"success"}
+	// ERR Encountered an internal error whilst responding to request error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)." gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=["A thing"] gorch_result_deletions=["A thing"] gorch_result_summary="Plan all the things" gorch_result_updates=["A thing"]
 	// ERR Encountered error error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)."
 }
