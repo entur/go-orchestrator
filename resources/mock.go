@@ -64,7 +64,7 @@ func (s *MockIAMServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	json.NewEncoder(w).Encode(resBody)
+	_ = json.NewEncoder(w).Encode(resBody)
 }
 
 func (s *MockIAMServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *http.Request) {
@@ -95,7 +95,7 @@ func (s *MockIAMServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *ht
 		}
 	}
 
-	json.NewEncoder(w).Encode(resBody)
+	_ = json.NewEncoder(w).Encode(resBody)
 }
 
 func (s *MockIAMServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Request) {
@@ -110,7 +110,7 @@ func (s *MockIAMServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Requ
 	var resBody EntraIDUserGroupsResponse
 
 	resBody.Groups = s.userGroups[reqBody.User]
-	json.NewEncoder(w).Encode(resBody)
+	_ = json.NewEncoder(w).Encode(resBody)
 }
 
 func (s *MockIAMServer) Url() string {
@@ -136,7 +136,9 @@ func (s *MockIAMServer) Start() error {
 	}
 
 	s.url = fmt.Sprintf("http://localhost:%d", l.Addr().(*net.TCPAddr).Port)
-	go s.server.Serve(l)
+	go func() {
+		_ = s.server.Serve(l)
+	}()
 
 	return nil
 }

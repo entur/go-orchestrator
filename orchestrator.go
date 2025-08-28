@@ -72,9 +72,35 @@ type Repository struct {
 	Visibility    RepositoryVisibility `json:"visibility"`    // E.g. 'public'
 }
 
+type FileChanges struct {
+	ContentsUrl string `json:"contentsUrl"` // E.g. 'https://github.com/entur/some-repo'
+	BlobUrl     string `json:"bloblUrl"`    // E.g. 'https://github.com/entur/some-repo'
+	RawUrl      string `json:"rawUrl"`      // E.g. 'https://github.com/entur/some-repo'
+}
+
+type PullRequestState string
+
+const (
+	PullRequestStateOpen   PullRequestState = "open"
+	PullRequestStateClosed PullRequestState = "closed"
+)
+
+type PullRequest struct {
+	ID      int              `json:"id"`
+	State   PullRequestState `json:"state"`
+	Ref     string           `json:"ref"`
+	Title   string           `json:"title"`
+	Body    string           `json:"body"`
+	Number  int              `json:"number"`
+	Labels  []string         `json:"labels"`
+	HtmlUrl string           `json:"htmlUrl"` // E.g. 'https://github.com/entur/some-repo'
+}
+
 type Origin struct {
-	FileName   string     `json:"fileName"`
-	Repository Repository `json:"repository"`
+	FileName    string      `json:"fileName"`
+	Repository  Repository  `json:"repository"`
+	FileChanges FileChanges `json:"fileChanges"`
+	PullRequest PullRequest `json:"pullRequest"`
 }
 
 type SenderType string
@@ -84,10 +110,21 @@ const (
 	SenderTypeBot  SenderType = "bot"
 )
 
+type RepositoryPermission string
+
+const (
+	RepositoryPermissionAdmin    RepositoryPermission = "admin"
+	RepositoryPermissionMaintain RepositoryPermission = "maintain"
+	RepositoryPermissionWrite    RepositoryPermission = "write"
+	RepositoryPermissionTriage   RepositoryPermission = "triage"
+	RepositoryPermissionRead     RepositoryPermission = "read"
+)
+
 type Sender struct {
-	Email string     `json:"githubEmail"`
-	ID    int        `json:"githubId"`
-	Type  SenderType `json:"type"`
+	Email      string     `json:"githubEmail"`
+	ID         int        `json:"githubId"`
+	Permission string     `json:"githubRepositoryPermission"`
+	Type       SenderType `json:"type"`
 }
 
 type ManifestHeader struct {
@@ -154,7 +191,7 @@ type Result struct {
 	done      bool     // If the result has been marked as done
 	summary   string   // Failure or Success summary
 	success   bool     // If the action succeeded or not. A false value indicates a user error
-	errs      []error    // The accumulated errors for this result
+	errs      []error  // The accumulated errors for this result
 	creations []string // A list of resources that are planned/being created.
 	updates   []string // A list of resources that are planned/being updated.
 	deletions []string // A list of resources that are planned/being deleted.

@@ -183,8 +183,16 @@ func Example() {
 		),
 	)
 
-	iamServer.Start()
-	defer iamServer.Stop()
+	err := iamServer.Start()
+	if err != nil {
+		logger.Panic().Err(err).Send()
+	}
+	defer func() {
+		err := iamServer.Stop()
+		if err != nil {
+			logger.Panic().Err(err).Send()
+		}
+	}()
 
 	so := NewExampleSO("mysoproject")
 	handler := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomLogger(logger))
@@ -203,7 +211,7 @@ func Example() {
 	}
 	e, _ := orchestrator.NewMockCloudEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.Url()))
 
-	err := handler(context.Background(), *e)
+	err = handler(context.Background(), *e)
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")
 	}

@@ -43,7 +43,9 @@ func request(ctx context.Context, client *http.Client, method string, url string
 	if err != nil {
 		return 0, fmt.Errorf("http '%s' request failed: %w", method, err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.Header.Get("Content-Type") == "application/json" {
 		dec := json.NewDecoder(res.Body)

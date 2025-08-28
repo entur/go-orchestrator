@@ -41,7 +41,6 @@ func UnmarshalCloudEvent(e cloudevent.Event, v any) error {
 	return json.Unmarshal(data.Message.Data, v)
 }
 
-
 // -----------------------
 // Handler
 // -----------------------
@@ -72,6 +71,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 	}
 
 	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
+
 	/*
 		TODO: Still need to figure out what to do here
 		if err != nil {
@@ -113,7 +113,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 	parentLogger.Debug().Msg("Created a new CloudEventHandler")
 	return func(ctx context.Context, e cloudevent.Event) error {
 		logger := parentLogger.With().Logger()
-		
+
 		var req Request
 
 		err := UnmarshalCloudEvent(e, &req)
@@ -153,7 +153,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 		}
 		mu.Unlock()
 
-		var res Response = Response{
+		var res = Response{
 			ApiVersion: ApiVersionOrchestratorResponseV1,
 			Metadata:   req.Metadata,
 			ResultCode: result.Code(),
