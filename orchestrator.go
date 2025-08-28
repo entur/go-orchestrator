@@ -73,9 +73,9 @@ type Repository struct {
 }
 
 type FileChanges struct {
-	ContentsUrl string `json:"contentsUrl"` // E.g. 'https://github.com/entur/some-repo'
-	BlobUrl     string `json:"bloblUrl"`    // E.g. 'https://github.com/entur/some-repo'
-	RawUrl      string `json:"rawUrl"`      // E.g. 'https://github.com/entur/some-repo'
+	ContentsUrl string `json:"contentsUrl"`
+	BlobUrl     string `json:"bloblUrl"`
+	RawUrl      string `json:"rawUrl"`
 }
 
 type PullRequestState string
@@ -93,7 +93,7 @@ type PullRequest struct {
 	Body    string           `json:"body"`
 	Number  int              `json:"number"`
 	Labels  []string         `json:"labels"`
-	HtmlUrl string           `json:"htmlUrl"` // E.g. 'https://github.com/entur/some-repo'
+	HtmlUrl string           `json:"htmlUrl"`
 }
 
 type Origin struct {
