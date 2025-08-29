@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/event"
 )
 
 type MinimalMetadata struct {
@@ -49,7 +48,7 @@ func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r 
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Done(true, "Plan all the things")
 	return nil
 }
 
@@ -67,7 +66,7 @@ func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Applied all the things", true)
+	r.Done(true, "Applied all the things")
 	return nil
 }
 
@@ -105,13 +104,15 @@ func ExampleMinimalSO() {
 	// Usually you would setup the sub-orchestrator inside an init function like so:
 	//
 	// 	func init() {
-	//			handler := orchestrator.NewEventHandler(so)
+	// 			so := NewSO()
+	//			handler := orchestrator.NewCloudEventHandler(so)
 	//	    	functions.CloudEvent("OrchestratorEvent", handler)
 	//	}
 	//
 	// However, here we are configuring and executing it as part of an example test.
 
 	so := NewMinimalExampleSO("mysoproject")
+	handler := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomPubSubClient(nil))
 
 	manifest := MinimalManifest{
 		ManifestHeader: orchestrator.ManifestHeader{
@@ -122,15 +123,13 @@ func ExampleMinimalSO() {
 			Name: "Test Name",
 		},
 	}
-
-	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
-	handler := event.NewEventHandler(so)
+	e, _ := orchestrator.NewMockCloudEvent(manifest)
 
 	err := handler(context.Background(), *e)
-
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	// Output:
-	// no topic set, unable to respond
+	//
 }

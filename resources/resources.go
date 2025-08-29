@@ -43,7 +43,9 @@ func request(ctx context.Context, client *http.Client, method string, url string
 	if err != nil {
 		return 0, fmt.Errorf("http '%s' request failed: %w", method, err)
 	}
-	defer res.Body.Close()
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.Header.Get("Content-Type") == "application/json" {
 		dec := json.NewDecoder(res.Body)
@@ -60,7 +62,7 @@ func request(ctx context.Context, client *http.Client, method string, url string
 // Resource Clients
 // -----------------------
 
-type IAMLookupClient struct {
+type IAMClient struct {
 	client *http.Client
 	url    string
 }
@@ -74,7 +76,7 @@ type GCPAppProjectsResponse struct {
 }
 
 // List all of the GCP project ids associated with an app-factory id.
-func (iam *IAMLookupClient) GCPAppProjectIDS(ctx context.Context, appID string) ([]string, error) {
+func (iam *IAMClient) GCPAppProjectIDS(ctx context.Context, appID string) ([]string, error) {
 	url := fmt.Sprintf("%s/app/projects/gcp", iam.url)
 	reqBody := GCPAppProjectsRequest{
 		AppID: appID,
@@ -103,7 +105,7 @@ type GCPUserAccessResponse struct {
 }
 
 // Check if the user (email) has the specified Sub-Orchestrator role in *all* of the given GCP projects.
-func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, projectIDs ...string) (bool, error) {
+func (iam *IAMClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, projectIDs ...string) (bool, error) {
 	url := fmt.Sprintf("%s/access/gcp", iam.url)
 	reqBody := GCPUserAccessRequest{
 		User: email,
@@ -135,7 +137,7 @@ type EntraIDUserGroupsResponse struct {
 }
 
 // List all of the entra id groups (without the @ suffix) that a user (email) belongs to.
-func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string) ([]string, error) {
+func (iam *IAMClient) EntraIDUserGroups(ctx context.Context, email string) ([]string, error) {
 	url := fmt.Sprintf("%s/groups/entraid", iam.url)
 	reqBody := EntraIDUserGroupsRequest{
 		User: email,
@@ -153,19 +155,19 @@ func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string)
 	return resBody.Groups, nil
 }
 
-type IAMLookupClientOption = idtoken.ClientOption
+type IAMClientOption = idtoken.ClientOption
 
-func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClientOption) (*IAMLookupClient, error) {
+func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IAMClient, error) {
 	logger := logging.Ctx(ctx)
 
 	client, err := idtoken.NewClient(ctx, url, opts...)
 	if err != nil {
 		errStr := err.Error()
 		if !strings.HasPrefix(errStr, "idtoken: unsupported credentials type") && !strings.HasPrefix(errStr, "google: could not find default credentials") {
-			return nil, fmt.Errorf("unable to create iamlookup client: %w", err)
+			return nil, fmt.Errorf("unable to create iam client: %w", err)
 		}
 
-		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup")
+		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAM")
 		client = &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
@@ -176,7 +178,7 @@ func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMLookupClient
 		}
 	}
 
-	return &IAMLookupClient{
+	return &IAMClient{
 		client: client,
 		url:    url,
 	}, nil

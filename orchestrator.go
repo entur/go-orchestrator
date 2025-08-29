@@ -2,13 +2,9 @@ package orchestrator
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"strings"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/entur/go-logging"
 )
 
@@ -17,6 +13,11 @@ import (
 // -----------------------
 
 type ApiVersion string
+
+const (
+	ApiVersionOrchestratorResponseV1 ApiVersion = "orchestrator.entur.io/request/v1"
+	ApiVersionOrchestratorRequestV1  ApiVersion = "orchestrator.entur.io/response/v1"
+)
 
 type Kind string
 
@@ -39,10 +40,10 @@ type Resource struct {
 	Url string `json:"url"`
 }
 
-type ResourceIAMLookup = Resource
+type ResourceIAM = Resource
 
 type Resources struct {
-	IAM ResourceIAMLookup `json:"iamLookup"`
+	IAM ResourceIAM `json:"iamLookup"`
 }
 
 type Action string
@@ -54,26 +55,52 @@ const (
 	ActionDestroy     Action = "destroy"
 )
 
-type GitRepositoryVisibility string
+type RepositoryVisibility string
 
 const (
-	GitRepositoryVisbilityPublic   GitRepositoryVisibility = "public"
-	GitRepositoryVisbilityInternal GitRepositoryVisibility = "internal"
-	GitRepositoryVisbilityPrivate  GitRepositoryVisibility = "private"
+	RepositoryVisbilityPublic   RepositoryVisibility = "public"
+	RepositoryVisbilityInternal RepositoryVisibility = "internal"
+	RepositoryVisbilityPrivate  RepositoryVisibility = "private"
 )
 
-type GitRepository struct {
-	ID            int                     `json:"id"`            // E.g. '123123145'
-	Name          string                  `json:"name"`          // E.g. 'some-remo'
-	FullName      string                  `json:"fullName"`      // E.g. 'entur/some-repo'
-	DefaultBranch string                  `json:"defaultBranch"` // E.g. 'main'
-	HtmlUrl       string                  `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
-	Visibility    GitRepositoryVisibility `json:"visibility"`    // E.g. 'public'
+type Repository struct {
+	ID            int                  `json:"id"`            // E.g. '123123145'
+	Name          string               `json:"name"`          // E.g. 'some-remo'
+	FullName      string               `json:"fullName"`      // E.g. 'entur/some-repo'
+	DefaultBranch string               `json:"defaultBranch"` // E.g. 'main'
+	HtmlUrl       string               `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
+	Visibility    RepositoryVisibility `json:"visibility"`    // E.g. 'public'
+}
+
+type FileChanges struct {
+	ContentsUrl string `json:"contentsUrl"`
+	BlobUrl     string `json:"bloblUrl"`
+	RawUrl      string `json:"rawUrl"`
+}
+
+type PullRequestState string
+
+const (
+	PullRequestStateOpen   PullRequestState = "open"
+	PullRequestStateClosed PullRequestState = "closed"
+)
+
+type PullRequest struct {
+	ID      int              `json:"id"`
+	State   PullRequestState `json:"state"`
+	Ref     string           `json:"ref"`
+	Title   string           `json:"title"`
+	Body    string           `json:"body"`
+	Number  int              `json:"number"`
+	Labels  []string         `json:"labels"`
+	HtmlUrl string           `json:"htmlUrl"`
 }
 
 type Origin struct {
-	FileName   string        `json:"fileName"`
-	Repository GitRepository `json:"repository"`
+	FileName    string      `json:"fileName"`
+	Repository  Repository  `json:"repository"`
+	FileChanges FileChanges `json:"fileChanges"`
+	PullRequest PullRequest `json:"pullRequest"`
 }
 
 type SenderType string
@@ -83,10 +110,22 @@ const (
 	SenderTypeBot  SenderType = "bot"
 )
 
+type RepositoryPermission string
+
+const (
+	RepositoryPermissionAdmin    RepositoryPermission = "admin"
+	RepositoryPermissionMaintain RepositoryPermission = "maintain"
+	RepositoryPermissionWrite    RepositoryPermission = "write"
+	RepositoryPermissionTriage   RepositoryPermission = "triage"
+	RepositoryPermissionRead     RepositoryPermission = "read"
+)
+
 type Sender struct {
-	Email string     `json:"githubEmail"`
-	ID    int        `json:"githubId"`
-	Type  SenderType `json:"type"`
+	Username   string               `json:"githubLogin"`
+	Email      string               `json:"githubEmail"`
+	ID         int                  `json:"githubId"`
+	Permission RepositoryPermission `json:"githubRepositoryPermission"`
+	Type       SenderType           `json:"type"`
 }
 
 type ManifestHeader struct {
@@ -102,7 +141,7 @@ type Manifests struct {
 }
 
 type Request struct {
-	ApiVersion    string        `json:"apiVersion"`
+	ApiVersion    ApiVersion    `json:"apiVersion"`
 	Metadata      OuterMetadata `json:"metadata"`
 	Resources     Resources     `json:"resources"`
 	ResponseTopic string        `json:"responseTopic"`
@@ -113,19 +152,10 @@ type Request struct {
 }
 
 type Response struct {
-	ApiVersion string        `json:"apiVersion"`
+	ApiVersion ApiVersion    `json:"apiVersion"`
 	Metadata   OuterMetadata `json:"metadata"`
 	ResultCode ResultCode    `json:"result"`
 	Output     string        `json:"output"`
-}
-
-func NewResponse(metadata OuterMetadata, code ResultCode, msg string) Response {
-	return Response{
-		ApiVersion: "orchestrator.entur.io/response/v1",
-		Metadata:   metadata,
-		ResultCode: code,
-		Output:     base64.StdEncoding.EncodeToString([]byte(msg)),
-	}
 }
 
 // -----------------------
@@ -158,78 +188,139 @@ type Orchestrator interface {
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 
-type Result struct {
-	done      bool     // If the result has been marked as done
-	errs      error    // The accumulated errors for this result
-	summary   string   // Failure or Success summary
-	success   bool     // If the action succeeded or not. A false value indicates a user error
-	creations []string // A list of resources that are planned/being created.
-	updates   []string // A list of resources that are planned/being updated.
-	deletions []string // A list of resources that are planned/being deleted.
+type Change interface {
+	String() string
 }
 
-func (r *Result) AccumulatedError() error {
+type simpleChange struct {
+	text string
+}
+
+func (change simpleChange) String() string {
+	return change.text
+}
+
+type Result struct {
+	locked    bool     // If the result has been marked as done and lcoked
+	summary   string   // Failure or Success summary
+	success   bool     // If the action succeeded or not. A false value indicates a user error
+	errs      []error  // The accumulated errors for this result
+	creations []Change // A list of resources that are planned/being created.
+	updates   []Change // A list of resources that are planned/being updated.
+	deletions []Change // A list of resources that are planned/being deleted.
+}
+
+// Get all errors that have accumulated.
+func (r *Result) Errors() []error {
 	return r.errs
 }
 
-func (r *Result) IsDone() bool {
-	return r.done
+// Is the result locked for further changes
+func (r *Result) Locked() bool {
+	return r.locked
 }
 
-func (r *Result) Done(summary string, success bool) {
-	if r.done {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to mark an already finished result as done"))
+// Mark result as done.
+func (r *Result) Done(success bool, summary string) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as done"))
 	} else {
-		r.done = true
+		r.locked = true
 		r.summary = summary
 		r.success = success
 	}
 }
 
-func (r *Result) Create(change ...string) {
-	if r.done {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a create change to an already finished result"))
-	} else {
-		r.creations = append(r.creations, change...)
+// Add a new 'create' change.
+// Valid change types are:
+// * string
+// * Stringer/Change
+func (r *Result) Create(change ...any) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change to a locked result"))
+		return
+	}
+
+	for _, val := range change {
+		switch v := val.(type) {
+		case string:
+			r.creations = append(r.creations, simpleChange{v})
+		case Change:
+			r.creations = append(r.creations, v)
+		default:
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that is not of 'string' or 'Change' type"))
+		}
 	}
 }
 
-func (r *Result) Creations() []string {
-	creations := make([]string, len(r.creations))
+// Get all current 'create' changes.
+func (r *Result) Creations() []Change {
+	creations := make([]Change, len(r.creations))
 	copy(creations, r.creations)
 	return creations
 }
 
-func (r *Result) Update(change ...string) {
-	if r.done {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add an update change to an already finished result"))
-	} else {
-		r.updates = append(r.updates, change...)
+// Add a new 'update' change.
+// Valid change types are:
+// * string
+// * Stringer/Change
+func (r *Result) Update(change ...any) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change to a locked result"))
+		return
+	}
+
+	for _, val := range change {
+		switch v := val.(type) {
+		case string:
+			r.updates = append(r.updates, simpleChange{v})
+		case Change:
+			r.updates = append(r.updates, v)
+		default:
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that is not of 'string' or 'Change' type"))
+		}
 	}
 }
 
-func (r *Result) Updates() []string {
-	updates := make([]string, len(r.updates))
+// Get all current 'update' changes.
+func (r *Result) Updates() []Change {
+	updates := make([]Change, len(r.updates))
 	copy(updates, r.updates)
 	return updates
 }
 
-func (r *Result) Delete(change ...string) {
-	if r.done {
-		r.errs = errors.Join(r.errs, logging.NewStackTraceError("attempted to add a delete change to an already finished result"))
-	} else {
-		r.deletions = append(r.deletions, change...)
+// Add a new 'delete' change.
+// Valid change types are:
+// * string
+// * Stringer/Change
+func (r *Result) Delete(change ...any) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change to a locked result"))
+		return
+	}
+
+	for _, val := range change {
+		switch v := val.(type) {
+		case string:
+			r.updates = append(r.deletions, simpleChange{v})
+		case Change:
+			r.updates = append(r.deletions, v)
+		default:
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that is not of 'string' or 'Change' type"))
+		}
 	}
 }
 
-func (r *Result) Deletions() []string {
-	deletions := make([]string, len(r.deletions))
+// Get all current 'delete' changes.
+func (r *Result) Deletions() []Change {
+	deletions := make([]Change, len(r.deletions))
 	copy(deletions, r.deletions)
 	return deletions
 }
 
+// Get the final result code.
 func (r *Result) Code() ResultCode {
-	if r.errs != nil || !r.done {
+	if len(r.errs) > 0 || !r.locked {
 		return ResultCodeError
 	}
 	if !r.success {
@@ -241,8 +332,9 @@ func (r *Result) Code() ResultCode {
 	return ResultCodeSuccess
 }
 
-func (r *Result) String() string {
-	if r.errs != nil || !r.done {
+// Get the final result string output.
+func (r *Result) Output() string {
+	if len(r.errs) > 0 || !r.locked {
 		return "Internal error"
 	}
 	if !r.success {
@@ -257,202 +349,29 @@ func (r *Result) String() string {
 	builder.WriteString(r.summary)
 	builder.WriteString("\n")
 	if len(r.creations) > 0 {
-		builder.WriteString("Created:\n")
-		for _, created := range r.creations {
+		builder.WriteString("Create:\n")
+		for _, create := range r.creations {
 			builder.WriteString("+ ")
-			builder.WriteString(created)
+			builder.WriteString(create.String())
 			builder.WriteString("\n")
 		}
 	}
 	if len(r.updates) > 0 {
-		builder.WriteString("Updated:\n")
-		for _, updated := range r.updates {
+		builder.WriteString("Update:\n")
+		for _, update := range r.updates {
 			builder.WriteString("! ")
-			builder.WriteString(updated)
+			builder.WriteString(update.String())
 			builder.WriteString("\n")
 		}
 	}
 	if len(r.deletions) > 0 {
-		builder.WriteString("Deleted:\n")
-		for _, deleted := range r.deletions {
+		builder.WriteString("Delete:\n")
+		for _, delete := range r.deletions {
 			builder.WriteString("- ")
-			builder.WriteString(deleted)
+			builder.WriteString(delete.String())
 			builder.WriteString("\n")
 		}
 	}
 
 	return builder.String()
-}
-
-// -----------------------
-// Processing
-// -----------------------
-
-type contextCache struct {
-	values map[string]any
-}
-
-func (c contextCache) Get(key string) any {
-	v, ok := c.values[key]
-	if !ok {
-		return nil
-	}
-	return v
-}
-
-func (c contextCache) Set(key string, value any) {
-	c.values[key] = value
-}
-
-func newContextCache() contextCache {
-	return contextCache{
-		values: map[string]any{},
-	}
-}
-
-type ctxKey struct{}
-
-func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Request, res *Result) error {
-	var err error
-
-	ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
-	logger := logging.Ctx(ctx)
-
-	project := so.ProjectID()
-	version := h.ApiVersion()
-	kind := h.Kind()
-	action := req.Action
-
-	before, ok := so.(MiddlewareBefore)
-	if ok {
-		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareBefore", project)
-		err = before.MiddlewareBefore(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("orchestrator middleware (before): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	before, ok = h.(MiddlewareBefore)
-	if ok {
-		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s) MiddlewareBefore", version, kind, action)
-		err = before.MiddlewareBefore(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("handler middleware (before): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s)", version, kind, action)
-	switch req.Action {
-	case ActionApply:
-		err = h.Apply(ctx, *req, res)
-	case ActionPlan:
-		err = h.Plan(ctx, *req, res)
-	case ActionPlanDestroy:
-		err = h.PlanDestroy(ctx, *req, res)
-	case ActionDestroy:
-		err = h.Destroy(ctx, *req, res)
-	default:
-		err = fmt.Errorf("invalid action")
-	}
-
-	if err != nil {
-		return fmt.Errorf("manifest handler (%s, %s, %s): %w", version, kind, action, err)
-	}
-
-	after, ok := h.(MiddlewareAfter)
-	if ok {
-		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s) MiddlewareAfter", version, kind, action)
-		err = after.MiddlewareAfter(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("handler middleware (after): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	after, ok = so.(MiddlewareAfter)
-	if ok {
-		logger.Debug().Msgf("Executing Orchestrator (%s) MiddlewareAfter", project)
-		err = after.MiddlewareAfter(ctx, *req, res)
-		if err != nil {
-			return fmt.Errorf("orchestrator middleware (after): %w", err)
-		}
-		if res.done {
-			return nil
-		}
-	}
-
-	if !res.done {
-		return fmt.Errorf("forgot to call .Done() in manifest handler (%s, %s, %s)", version, kind, action)
-	}
-
-	return nil
-}
-
-func Receive(ctx context.Context, so Orchestrator, req Request) Result {
-	logger := logging.Ctx(ctx)
-	logger.Info().Interface("gorch_request", req).Msg("Received and processing request")
-
-	var result Result
-	var header ManifestHeader
-
-	err := json.Unmarshal(req.Manifest.New, &header)
-	if err != nil {
-		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
-	} else {
-		match := false
-
-		for _, h := range so.Handlers() {
-			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
-				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.ApiVersion, header.Kind)
-				err = process(ctx, so, h, &req, &result)
-				match = true
-				break
-			}
-		}
-
-		if !match {
-			err = fmt.Errorf("no matching ManifestHandler for (%s, %s)", header.ApiVersion, header.Kind)
-		}
-	}
-
-	result.errs = errors.Join(result.errs, err)
-	return result
-}
-
-func Respond(ctx context.Context, topic *pubsub.Topic, res Response) error {
-	logger := logging.Ctx(ctx)
-	logger.Info().Interface("gorch_response", res).Msg("Sending response")
-
-	if topic == nil {
-		return fmt.Errorf("no topic set, unable to respond")
-	}
-
-	enc, err := json.Marshal(res)
-	if err != nil {
-		return err
-	}
-
-	result := topic.Publish(ctx, &pubsub.Message{
-		Data: enc,
-	})
-	_, err = result.Get(ctx)
-	return err
-}
-
-// Retrieve the cache attached to the current request context
-func CtxCache(ctx context.Context) contextCache {
-	v := ctx.Value(ctxKey{})
-	if v == nil {
-		return newContextCache()
-	}
-	c, _ := v.(contextCache)
-	return c
 }

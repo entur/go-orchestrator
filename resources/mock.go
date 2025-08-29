@@ -37,7 +37,7 @@ func enforceJSON(next http.Handler) http.Handler {
 // Resource Servers
 // -----------------------
 
-type MockIAMLookupServer struct {
+type MockIAMServer struct {
 	server           *http.Server
 	port             int
 	url              string
@@ -46,7 +46,7 @@ type MockIAMLookupServer struct {
 	userGroups       map[string][]string
 }
 
-func (s *MockIAMLookupServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Request) {
 	var reqBody GCPAppProjectsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -64,10 +64,10 @@ func (s *MockIAMLookupServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Re
 		return
 	}
 
-	json.NewEncoder(w).Encode(resBody)
+	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMLookupServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *http.Request) {
 	var reqBody GCPUserAccessRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -95,10 +95,10 @@ func (s *MockIAMLookupServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, r
 		}
 	}
 
-	json.NewEncoder(w).Encode(resBody)
+	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMLookupServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Request) {
 	var reqBody EntraIDUserGroupsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -110,15 +110,15 @@ func (s *MockIAMLookupServer) hEntraIDUserGroups(w http.ResponseWriter, req *htt
 	var resBody EntraIDUserGroupsResponse
 
 	resBody.Groups = s.userGroups[reqBody.User]
-	json.NewEncoder(w).Encode(resBody)
+	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMLookupServer) Url() string {
+func (s *MockIAMServer) Url() string {
 	return s.url
 }
 
 // Non-blocking
-func (s *MockIAMLookupServer) Start() error {
+func (s *MockIAMServer) Start() error {
 	if s.url != "" {
 		return fmt.Errorf("server is already running")
 	}
@@ -136,33 +136,35 @@ func (s *MockIAMLookupServer) Start() error {
 	}
 
 	s.url = fmt.Sprintf("http://localhost:%d", l.Addr().(*net.TCPAddr).Port)
-	go s.server.Serve(l)
+	go func() {
+		_ = s.server.Serve(l)
+	}()
 
 	return nil
 }
 
-func (s *MockIAMLookupServer) Stop() error {
+func (s *MockIAMServer) Stop() error {
 	err := s.server.Close()
 	s.url = ""
 	return err
 }
 
-type MockIAMLookupServerOption func(*MockIAMLookupServer)
+type MockIAMServerOption func(*MockIAMServer)
 
-func WithPort(port int) MockIAMLookupServerOption {
-	return func(s *MockIAMLookupServer) {
+func WithPort(port int) MockIAMServerOption {
+	return func(s *MockIAMServer) {
 		s.port = port
 	}
 }
 
-func WithAppIDProjects(appID string, projectIDS []string) MockIAMLookupServerOption {
-	return func(s *MockIAMLookupServer) {
+func WithAppIDProjects(appID string, projectIDS []string) MockIAMServerOption {
+	return func(s *MockIAMServer) {
 		s.appIDProjects[appID] = projectIDS
 	}
 }
 
-func WithUserProjectRoles(email string, projectID string, roles []string) MockIAMLookupServerOption {
-	return func(s *MockIAMLookupServer) {
+func WithUserProjectRoles(email string, projectID string, roles []string) MockIAMServerOption {
+	return func(s *MockIAMServer) {
 		project, ok := s.userProjectRoles[projectID]
 		if !ok {
 			project = map[string][]string{}
@@ -173,14 +175,14 @@ func WithUserProjectRoles(email string, projectID string, roles []string) MockIA
 	}
 }
 
-func WithUserGroups(email string, groups []string) MockIAMLookupServerOption {
-	return func(s *MockIAMLookupServer) {
+func WithUserGroups(email string, groups []string) MockIAMServerOption {
+	return func(s *MockIAMServer) {
 		s.userGroups[email] = groups
 	}
 }
 
-func NewMockIAMLookupServer(opts ...MockIAMLookupServerOption) (*MockIAMLookupServer, error) {
-	s := &MockIAMLookupServer{
+func NewMockIAMServer(opts ...MockIAMServerOption) (*MockIAMServer, error) {
+	s := &MockIAMServer{
 		appIDProjects:    map[string][]string{},
 		userProjectRoles: map[string]map[string][]string{},
 		userGroups:       map[string][]string{},

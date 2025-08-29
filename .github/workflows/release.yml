@@ -12,15 +12,22 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       with:
+        persist-credentials: false
         fetch-depth: 0
 
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.24.2'
+        go-version-file: "./go.mod"
 
     - name: Build
       run: go build -v ./...
+
+    - name: Lint
+      uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
+      with:
+        version: v2.4
+        args: --timeout 5m ./...
 
     - name: Test
       run: go test -json -coverpkg=./... -coverprofile=coverage.out ./... > test-report.json

@@ -43,7 +43,6 @@ Typical dependencies
 import (
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/event"
 )
 ```
 
