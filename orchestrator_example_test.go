@@ -54,7 +54,7 @@ func (h *ExampleManifestV1Handler) Plan(ctx context.Context, req orchestrator.Re
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Done(true, "Plan all the things")
 	return nil
 }
 
@@ -72,7 +72,7 @@ func (h *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.R
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Done(true, "Plan all the things")
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 
 	logger.Info().Msg("Before it begins")
 	if req.Origin.Repository.Visibility != orchestrator.RepositoryVisbilityPublic {
-		r.Done("This sub-orchestrator only accepts manifests in public repositories", false)
+		r.Done(false, "This sub-orchestrator only accepts manifests in public repositories")
 		return nil
 	}
 
@@ -116,7 +116,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 		}
 
 		if access == false {
-			r.Done("You don't have access to ent-someproject-dev", false)
+			r.Done(false, "You don't have access to ent-someproject-dev")
 			return nil
 		}
 	}

@@ -48,7 +48,7 @@ func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r 
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Done(true, "Plan all the things")
 	return nil
 }
 
@@ -66,7 +66,7 @@ func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Applied all the things", true)
+	r.Done(true, "Applied all the things")
 	return nil
 }
 

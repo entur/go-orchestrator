@@ -210,11 +210,13 @@ type Result struct {
 	deletions []Change // A list of resources that are planned/being deleted.
 }
 
+// Get all errors that have accumulated.
 func (r *Result) Errors() []error {
 	return r.errs
 }
 
-func (r *Result) Done(summary string, success bool) {
+// Mark the result as done.
+func (r *Result) Done(success bool, summary string) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as done"))
 	} else {
@@ -224,6 +226,10 @@ func (r *Result) Done(summary string, success bool) {
 	}
 }
 
+// Add a new 'create' change.
+// Valid change types are:
+// * string
+// * Stringer/Change
 func (r *Result) Create(change ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change to a locked result"))
@@ -242,12 +248,17 @@ func (r *Result) Create(change ...any) {
 	}
 }
 
+// Get all current 'create' changes.
 func (r *Result) Creations() []Change {
 	creations := make([]Change, len(r.creations))
 	copy(creations, r.creations)
 	return creations
 }
 
+// Add a new 'update' change.
+// Valid change types are:
+// * string
+// * Stringer/Change
 func (r *Result) Update(change ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change to a locked result"))
@@ -266,12 +277,17 @@ func (r *Result) Update(change ...any) {
 	}
 }
 
+// Get all current 'update' changes.
 func (r *Result) Updates() []Change {
 	updates := make([]Change, len(r.updates))
 	copy(updates, r.updates)
 	return updates
 }
 
+// Add a new 'delete' change.
+// Valid change types are:
+// * string
+// * Stringer/Change
 func (r *Result) Delete(change ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change to a locked result"))
@@ -290,12 +306,14 @@ func (r *Result) Delete(change ...any) {
 	}
 }
 
+// Get all current 'delete' changes.
 func (r *Result) Deletions() []Change {
 	deletions := make([]Change, len(r.deletions))
 	copy(deletions, r.deletions)
 	return deletions
 }
 
+// Get the final result code.
 func (r *Result) Code() ResultCode {
 	if len(r.errs) > 0 || !r.locked {
 		return ResultCodeError
@@ -309,6 +327,7 @@ func (r *Result) Code() ResultCode {
 	return ResultCodeSuccess
 }
 
+// Get the final result string output.
 func (r *Result) Output() string {
 	if len(r.errs) > 0 || !r.locked {
 		return "Internal error"
