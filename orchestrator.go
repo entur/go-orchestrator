@@ -215,7 +215,12 @@ func (r *Result) Errors() []error {
 	return r.errs
 }
 
-// Mark the result as done.
+// Is the result locked for further changes
+func (r *Result) Locked() bool {
+	return r.locked
+}
+
+// Mark result as done.
 func (r *Result) Done(success bool, summary string) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as done"))
