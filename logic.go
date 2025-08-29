@@ -55,7 +55,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (before): %w", err)
 		}
-		if res.done {
+		if res.locked {
 			return nil
 		}
 	}
@@ -67,7 +67,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("manifesthandler middleware (before): %w", err)
 		}
-		if res.done {
+		if res.locked {
 			return nil
 		}
 	}
@@ -97,7 +97,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("manifesthandler middleware (after): %w", err)
 		}
-		if res.done {
+		if res.locked {
 			return nil
 		}
 	}
@@ -109,12 +109,12 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (after): %w", err)
 		}
-		if res.done {
+		if res.locked {
 			return nil
 		}
 	}
 
-	if !res.done {
+	if !res.locked {
 		return fmt.Errorf("forgot to call .Done() in manifest handler (%s, %s, %s)", version, kind, action)
 	}
 

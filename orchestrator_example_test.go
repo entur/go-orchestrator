@@ -159,7 +159,7 @@ func Example() {
 	// Usually you would setup the sub-orchestrator inside an init function like so:
 	//
 	// 	func init() {
-	//			handler := orchestrator.NewEventHandler(so)
+	//			handler := orchestrator.NewCloudEventHandler(so)
 	//	    	functions.CloudEvent("OrchestratorEvent", handler)
 	//	}
 	//
@@ -195,7 +195,10 @@ func Example() {
 	}()
 
 	so := NewExampleSO("mysoproject")
-	handler := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomLogger(logger))
+	handler := orchestrator.NewCloudEventHandler(so,
+		orchestrator.WithCustomLogger(logger),
+		orchestrator.WithCustomPubSubClient(nil),
+	)
 
 	manifest := ExampleManifestV1{
 		ManifestHeader: orchestrator.ManifestHeader{
@@ -218,7 +221,7 @@ func Example() {
 
 	// Output:
 	// DBG Created a new CloudEventHandler
-	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=mockid
+	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileChanges":{"bloblUrl":"","contentsUrl":"","rawUrl":""},"fileName":"","pullRequest":{"body":"","htmlUrl":"","id":0,"labels":null,"number":0,"ref":"","state":"open","title":""},"repository":{"defaultBranch":"main","fullName":"entur/mockrepo","htmlUrl":"","id":0,"name":"mockrepo","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"githubLogin":"mockuser","githubRepositoryPermission":"admin","type":"user"}} gorch_request_id=mockid
 	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// DBG Executing Orchestrator MiddlewareBefore (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
@@ -231,7 +234,5 @@ func Example() {
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_response={"apiVersion":"orchestrator.entur.io/request/v1","metadata":{"requestId":"mockid"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGU6CisgQSB0aGluZwpVcGRhdGU6CiEgQSB0aGluZwpEZWxldGU6Ci0gQSB0aGluZwo=","result":"success"}
-	// ERR Encountered an internal error whilst responding to request error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)." gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=["A thing"] gorch_result_deletions=["A thing"] gorch_result_summary="Plan all the things" gorch_result_updates=["A thing"]
-	// ERR Encountered error error="rpc error: code = NotFound desc = Resource not found (resource=mocktopic)."
+	// WRN Pubsub client is set to null, no responses will be sent gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=[{}] gorch_result_deletions=null gorch_result_summary="Plan all the things" gorch_result_updates=[{}]
 }

@@ -9,10 +9,15 @@ import (
 
 const DefaultMockRequestID = "mockid"
 const DefaultMockResponseTopic = "mocktopic"
+const DefaultMockPullRequestState = PullRequestStateOpen
+const DefaultMockRepositoryName = "mockrepo"
+const DefaultMockRepositoryFullName = "entur/mockrepo"
 const DefaultMockDefaultBranch = "main"
 const DefaultMockRepositoryVisibility = RepositoryVisbilityPublic
 const DefaultMockSenderType = SenderTypeUser
+const DefaultMockUsername = "mockuser"
 const DefaultMockUserEmail = "mockuser@entur.io"
+const DefaultMockUserPermission = RepositoryPermissionAdmin
 const DefaultMockAction = ActionPlan
 
 type MockRequestOption func(*Request)
@@ -47,14 +52,21 @@ func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 			RequestID: DefaultMockRequestID,
 		},
 		Origin: Origin{
+			PullRequest: PullRequest{
+				State: DefaultMockPullRequestState,
+			},
 			Repository: Repository{
+				Name:          DefaultMockRepositoryName,
+				FullName:      DefaultMockRepositoryFullName,
 				DefaultBranch: DefaultMockDefaultBranch,
 				Visibility:    DefaultMockRepositoryVisibility,
 			},
 		},
 		Sender: Sender{
-			Type:  DefaultMockSenderType,
-			Email: DefaultMockUserEmail,
+			Username:   DefaultMockUsername,
+			Email:      DefaultMockUserEmail,
+			Type:       DefaultMockSenderType,
+			Permission: DefaultMockUserPermission,
 		},
 		Action:        DefaultMockAction,
 		ResponseTopic: DefaultMockResponseTopic,

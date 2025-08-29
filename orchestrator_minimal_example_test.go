@@ -111,7 +111,7 @@ func ExampleMinimalSO() {
 	// However, here we are configuring and executing it as part of an example test.
 
 	so := NewMinimalExampleSO("mysoproject")
-	handler := orchestrator.NewCloudEventHandler(so)
+	handler := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomPubSubClient(nil))
 
 	manifest := MinimalManifest{
 		ManifestHeader: orchestrator.ManifestHeader{
@@ -130,5 +130,5 @@ func ExampleMinimalSO() {
 	}
 
 	// Output:
-	// rpc error: code = NotFound desc = Resource not found (resource=mocktopic).
+	//
 }

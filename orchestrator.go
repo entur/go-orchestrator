@@ -121,10 +121,11 @@ const (
 )
 
 type Sender struct {
-	Email      string     `json:"githubEmail"`
-	ID         int        `json:"githubId"`
-	Permission string     `json:"githubRepositoryPermission"`
-	Type       SenderType `json:"type"`
+	Username   string               `json:"githubLogin"`
+	Email      string               `json:"githubEmail"`
+	ID         int                  `json:"githubId"`
+	Permission RepositoryPermission `json:"githubRepositoryPermission"`
+	Type       SenderType           `json:"type"`
 }
 
 type ManifestHeader struct {
@@ -187,78 +188,116 @@ type Orchestrator interface {
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 
+type Change interface {
+	String() string
+}
+
+type simpleChange struct {
+	text string
+}
+
+func (change simpleChange) String() string {
+	return change.text
+}
+
 type Result struct {
-	done      bool     // If the result has been marked as done
+	locked    bool     // If the result has been marked as done and lcoked
 	summary   string   // Failure or Success summary
 	success   bool     // If the action succeeded or not. A false value indicates a user error
 	errs      []error  // The accumulated errors for this result
-	creations []string // A list of resources that are planned/being created.
-	updates   []string // A list of resources that are planned/being updated.
-	deletions []string // A list of resources that are planned/being deleted.
+	creations []Change // A list of resources that are planned/being created.
+	updates   []Change // A list of resources that are planned/being updated.
+	deletions []Change // A list of resources that are planned/being deleted.
 }
 
 func (r *Result) Errors() []error {
 	return r.errs
 }
 
-func (r *Result) IsDone() bool {
-	return r.done
-}
-
 func (r *Result) Done(summary string, success bool) {
-	if r.done {
-		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark an already finished result as done"))
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as done"))
 	} else {
-		r.done = true
+		r.locked = true
 		r.summary = summary
 		r.success = success
 	}
 }
 
-func (r *Result) Create(change ...string) {
-	if r.done {
-		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a create change to an already finished result"))
-	} else {
-		r.creations = append(r.creations, change...)
+func (r *Result) Create(change ...any) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change to a locked result"))
+		return
+	}
+
+	for _, val := range change {
+		switch v := val.(type) {
+		case string:
+			r.creations = append(r.creations, simpleChange{v})
+		case Change:
+			r.creations = append(r.creations, v)
+		default:
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that is not of 'string' or 'Change' type"))
+		}
 	}
 }
 
-func (r *Result) Creations() []string {
-	creations := make([]string, len(r.creations))
+func (r *Result) Creations() []Change {
+	creations := make([]Change, len(r.creations))
 	copy(creations, r.creations)
 	return creations
 }
 
-func (r *Result) Update(change ...string) {
-	if r.done {
-		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add an update change to an already finished result"))
-	} else {
-		r.updates = append(r.updates, change...)
+func (r *Result) Update(change ...any) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change to a locked result"))
+		return
+	}
+
+	for _, val := range change {
+		switch v := val.(type) {
+		case string:
+			r.updates = append(r.updates, simpleChange{v})
+		case Change:
+			r.updates = append(r.updates, v)
+		default:
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that is not of 'string' or 'Change' type"))
+		}
 	}
 }
 
-func (r *Result) Updates() []string {
-	updates := make([]string, len(r.updates))
+func (r *Result) Updates() []Change {
+	updates := make([]Change, len(r.updates))
 	copy(updates, r.updates)
 	return updates
 }
 
-func (r *Result) Delete(change ...string) {
-	if r.done {
-		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a delete change to an already finished result"))
-	} else {
-		r.deletions = append(r.deletions, change...)
+func (r *Result) Delete(change ...any) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change to a locked result"))
+		return
+	}
+
+	for _, val := range change {
+		switch v := val.(type) {
+		case string:
+			r.updates = append(r.deletions, simpleChange{v})
+		case Change:
+			r.updates = append(r.deletions, v)
+		default:
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that is not of 'string' or 'Change' type"))
+		}
 	}
 }
 
-func (r *Result) Deletions() []string {
-	deletions := make([]string, len(r.deletions))
+func (r *Result) Deletions() []Change {
+	deletions := make([]Change, len(r.deletions))
 	copy(deletions, r.deletions)
 	return deletions
 }
 
 func (r *Result) Code() ResultCode {
-	if len(r.errs) > 0 || !r.done {
+	if len(r.errs) > 0 || !r.locked {
 		return ResultCodeError
 	}
 	if !r.success {
@@ -271,7 +310,7 @@ func (r *Result) Code() ResultCode {
 }
 
 func (r *Result) Output() string {
-	if len(r.errs) > 0 || !r.done {
+	if len(r.errs) > 0 || !r.locked {
 		return "Internal error"
 	}
 	if !r.success {
@@ -289,7 +328,7 @@ func (r *Result) Output() string {
 		builder.WriteString("Create:\n")
 		for _, create := range r.creations {
 			builder.WriteString("+ ")
-			builder.WriteString(create)
+			builder.WriteString(create.String())
 			builder.WriteString("\n")
 		}
 	}
@@ -297,7 +336,7 @@ func (r *Result) Output() string {
 		builder.WriteString("Update:\n")
 		for _, update := range r.updates {
 			builder.WriteString("! ")
-			builder.WriteString(update)
+			builder.WriteString(update.String())
 			builder.WriteString("\n")
 		}
 	}
@@ -305,7 +344,7 @@ func (r *Result) Output() string {
 		builder.WriteString("Delete:\n")
 		for _, delete := range r.deletions {
 			builder.WriteString("- ")
-			builder.WriteString(delete)
+			builder.WriteString(delete.String())
 			builder.WriteString("\n")
 		}
 	}

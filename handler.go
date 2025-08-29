@@ -46,7 +46,9 @@ func UnmarshalCloudEvent(e cloudevent.Event, v any) error {
 // -----------------------
 
 type HandlerConfig struct {
-	logger *zerolog.Logger
+	client    *pubsub.Client
+	clientSet bool
+	logger    *zerolog.Logger
 }
 
 type HandlerOption func(*HandlerConfig)
@@ -54,6 +56,13 @@ type HandlerOption func(*HandlerConfig)
 func WithCustomLogger(logger zerolog.Logger) HandlerOption {
 	return func(c *HandlerConfig) {
 		c.logger = &logger
+	}
+}
+
+func WithCustomPubSubClient(client *pubsub.Client) HandlerOption {
+	return func(c *HandlerConfig) {
+		c.client = client
+		c.clientSet = true
 	}
 }
 
@@ -70,42 +79,12 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 		parentLogger = logging.New()
 	}
 
-	client, _ := pubsub.NewClient(context.Background(), so.ProjectID())
-
-	/*
-		TODO: Still need to figure out what to do here
-		if err != nil {
-			errStr := err.Error()
-			if !strings.HasPrefix(errStr, "pubsub(publisher): credentials: could not find default credentials.") {
-				parentLogger.Panic().Err(err).Msg("Failed to create underlying pubsub client")
-			}
-
-			//option.WithCredentialsJSON([]byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`)),
-
-
-			os.Setenv("PUBSUB_EMULATOR_HOST", )
-
-			client, err = pubsub.NewClient(context.Background(), "",
-				option.WithoutAuthentication(),
-				option.WithTelemetryDisabled(),
-				internaloption.SkipDialSettingsValidation(),
-				option.WithGRPCDialOption(
-					grpc.WithTransportCredentials(insecure.NewCredentials()),
-				),
-			)
-
-				option.WithAuthCredentials(auth.NewCredentials(&auth.CredentialsOptions{
-					JSON: []byte(`{"type": "external_account", "audience": "test", "subject_token_type": "test"}`),
-				})),
-
-			)
-			if err != nil {
-				return func(ctx context.Context, e cloudevent.Event) error {
-					return err
-				}
-			}
-		}
-	*/
+	var client *pubsub.Client
+	if cfg.clientSet {
+		client = cfg.client
+	} else {
+		client, _ = pubsub.NewClient(context.Background(), so.ProjectID())
+	}
 
 	publishers := map[string]*pubsub.Publisher{}
 	mu := sync.Mutex{}
@@ -131,6 +110,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 
 		ctx = logger.WithContext(ctx)
 		result := Process(ctx, so, &req)
+		err = errors.Join(result.errs...)
 
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
 			return c.Interface("gorch_result_summary", result.summary).
@@ -139,30 +119,30 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 				Interface("gorch_result_deletions", result.deletions)
 		})
 
-		if errs := result.Errors(); len(errs) > 0 {
-			err = errors.Join(errs...)
-			logger.Error().Stack().Err(err).Msg("Encountered an internal error whilst processing request")
+		if client == nil {
+			logger.Warn().Msg("Pubsub client is set to null, no responses will be sent")
+		} else {
+			mu.Lock()
+			topic := req.ResponseTopic
+			publisher, ok := publishers[topic]
+			if !ok {
+				publisher = client.Publisher(topic)
+				publishers[topic] = publisher
+			}
+			mu.Unlock()
+
+			var res = Response{
+				ApiVersion: ApiVersionOrchestratorResponseV1,
+				Metadata:   req.Metadata,
+				ResultCode: result.Code(),
+				Output:     base64.StdEncoding.EncodeToString([]byte(result.Output())),
+			}
+
+			err = errors.Join(err, respond(ctx, publisher, &res))
 		}
 
-		mu.Lock()
-		topic := req.ResponseTopic
-		publisher, ok := publishers[topic]
-		if !ok {
-			publisher = client.Publisher(topic)
-			publishers[topic] = publisher
-		}
-		mu.Unlock()
-
-		var res = Response{
-			ApiVersion: ApiVersionOrchestratorResponseV1,
-			Metadata:   req.Metadata,
-			ResultCode: result.Code(),
-			Output:     base64.StdEncoding.EncodeToString([]byte(result.Output())),
-		}
-
-		err = respond(ctx, publisher, &res)
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error whilst responding to request")
+			logger.Error().Err(err).Msg("Encountered an internal error during processing")
 		}
 		return err
 	}
