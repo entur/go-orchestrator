@@ -104,7 +104,8 @@ func ExampleMinimalSO() {
 	// Usually you would setup the sub-orchestrator inside an init function like so:
 	//
 	// 	func init() {
-	//			handler := orchestrator.NewEventHandler(so)
+	// 			so := NewSO()
+	//			handler := orchestrator.NewCloudEventHandler(so)
 	//	    	functions.CloudEvent("OrchestratorEvent", handler)
 	//	}
 	//
