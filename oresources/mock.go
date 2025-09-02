@@ -49,7 +49,7 @@ type MockIAMServer struct {
 	userGroups       map[string][]string
 }
 
-func (s *MockIAMServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMServer) hGCPProjectIDs(w http.ResponseWriter, req *http.Request) {
 	var reqBody GCPAppProjectsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -60,8 +60,8 @@ func (s *MockIAMServer) hGCPProjectIDS(w http.ResponseWriter, req *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	var resBody GCPAppProjectsResponse
 
-	projectIDS, ok := s.appIDProjects[reqBody.AppID]
-	resBody.ProjectIDS = projectIDS
+	projectIDs, ok := s.appIDProjects[reqBody.AppID]
+	resBody.ProjectIDs = projectIDs
 	if !ok {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
@@ -160,9 +160,9 @@ func WithPort(port int) MockIAMServerOption {
 	}
 }
 
-func WithAppIDProjects(appID string, projectIDS []string) MockIAMServerOption {
+func WithAppIDProjects(appID string, projectIDs []string) MockIAMServerOption {
 	return func(s *MockIAMServer) {
-		s.appIDProjects[appID] = projectIDS
+		s.appIDProjects[appID] = projectIDs
 	}
 }
 
@@ -202,7 +202,7 @@ func NewMockIAMServer(opts ...MockIAMServerOption) (*MockIAMServer, error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /app/projects/gcp", enforceJSON(http.HandlerFunc(s.hGCPProjectIDS)))
+	mux.Handle("POST /app/projects/gcp", enforceJSON(http.HandlerFunc(s.hGCPProjectIDs)))
 	mux.Handle("POST /access/gcp", enforceJSON(http.HandlerFunc(s.hGCPUserHasRoleInProjects)))
 	mux.Handle("POST /groups/entraid", enforceJSON(http.HandlerFunc(s.hEntraIDUserGroups)))
 

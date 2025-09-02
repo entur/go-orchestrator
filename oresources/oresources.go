@@ -75,11 +75,11 @@ type GCPAppProjectsRequest struct {
 }
 
 type GCPAppProjectsResponse struct {
-	ProjectIDS []string `json:"projects"`
+	ProjectIDs []string `json:"projects"`
 }
 
 // List all of the GCP project ids associated with an app-factory id.
-func (iam *IAMClient) GCPAppProjectIDS(ctx context.Context, appID string) ([]string, error) {
+func (iam *IAMClient) GCPAppProjectIDs(ctx context.Context, appID string) ([]string, error) {
 	url := fmt.Sprintf("%s/app/projects/gcp", iam.url)
 	reqBody := GCPAppProjectsRequest{
 		AppID: appID,
@@ -94,7 +94,7 @@ func (iam *IAMClient) GCPAppProjectIDS(ctx context.Context, appID string) ([]str
 		return nil, err
 	}
 
-	return resBody.ProjectIDS, nil
+	return resBody.ProjectIDs, nil
 }
 
 type GCPUserAccessRequest struct {
