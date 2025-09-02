@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/entur/go-orchestrator/compare/v1.5.0...v1.5.1) (2025-09-02)
+
+
+### Bug Fixes
+
+* Add support for []string and []Change in Result additions ([#60](https://github.com/entur/go-orchestrator/issues/60)) ([bec2349](https://github.com/entur/go-orchestrator/commit/bec2349d0c5ccbe2bb54ddcf2811425a7899ccdc))
+
 ## [1.5.0](https://github.com/entur/go-orchestrator/compare/v1.4.0...v1.5.0) (2025-09-02)
 
 
