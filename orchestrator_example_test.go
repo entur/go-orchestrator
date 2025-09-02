@@ -7,7 +7,7 @@ import (
 
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/resources"
+	"github.com/entur/go-orchestrator/oresources"
 )
 
 type ExampleSpecV1 struct {
@@ -105,7 +105,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
-		client, err := resources.NewIAMClient(ctx, req.Resources.IAM.Url)
+		client, err := oresources.NewIAMClient(ctx, req.Resources.IAM.Url)
 		if err != nil {
 			return err
 		}
@@ -175,9 +175,9 @@ func Example() {
 		),
 	)
 
-	iamServer, _ := resources.NewMockIAMServer(
-		resources.WithPort(8001),
-		resources.WithUserProjectRoles(
+	iamServer, _ := oresources.NewMockIAMServer(
+		oresources.WithPort(8001),
+		oresources.WithUserProjectRoles(
 			orchestrator.DefaultMockUserEmail,
 			"ent-someproject-dev",
 			[]string{"your_so_role"},

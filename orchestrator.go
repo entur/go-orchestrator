@@ -86,7 +86,7 @@ const (
 )
 
 type PullRequest struct {
-	ID      int              `json:"id"`
+	ID      int              `json:"id"` // '123123145'
 	State   PullRequestState `json:"state"` // 'open'
 	Ref     string           `json:"ref"`
 	Title   string           `json:"title"` // 'chore: Added .entur manifests'
@@ -246,10 +246,10 @@ func (r *Result) Fail(summary string) {
 	}
 }
 
-// Add a new 'create' change.
+// Add a new 'create' change to the result.
 // Valid change types are:
 // * string
-// * Stringer/Change
+// * Stringer/Change interface
 func (r *Result) Create(change ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change to a locked result"))
@@ -275,10 +275,10 @@ func (r *Result) Creations() []Change {
 	return creations
 }
 
-// Add a new 'update' change.
+// Add a new 'update' change to the result.
 // Valid change types are:
 // * string
-// * Stringer/Change
+// * Stringer/Change interface
 func (r *Result) Update(change ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change to a locked result"))
@@ -304,10 +304,10 @@ func (r *Result) Updates() []Change {
 	return updates
 }
 
-// Add a new 'delete' change.
+// Add a new 'delete' change to the result.
 // Valid change types are:
 // * string
-// * Stringer/Change
+// * Stringer/Change interface
 func (r *Result) Delete(change ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change to a locked result"))

@@ -13,34 +13,14 @@ import (
 // Internal
 // -----------------------
 
-type contextCache struct {
-	values map[string]any
-}
-
-func (c contextCache) Get(key string) any {
-	v, ok := c.values[key]
-	if !ok {
-		return nil
-	}
-	return v
-}
-
-func (c contextCache) Set(key string, value any) {
-	c.values[key] = value
-}
-
-func newContextCache() contextCache {
-	return contextCache{
-		values: map[string]any{},
-	}
-}
-
 type ctxKey struct{}
 
 func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Request, res *Result) error {
 	var err error
 
-	ctx = context.WithValue(ctx, ctxKey{}, newContextCache())
+	ctx = context.WithValue(ctx, ctxKey{}, ContextCache{
+		values: map[string]any{},
+	})
 	logger := logging.Ctx(ctx)
 
 	project := so.ProjectID()
@@ -175,12 +155,30 @@ func Process(ctx context.Context, so Orchestrator, req *Request) Result {
 	return result
 }
 
+type ContextCache struct {
+	values map[string]any
+}
+
+func (c ContextCache) Get(key string) any {
+	v, ok := c.values[key]
+	if !ok {
+		return nil
+	}
+	return v
+}
+
+func (c ContextCache) Set(key string, value any) {
+	c.values[key] = value
+}
+
 // Retrieve the value cache attached to the current request context
-func Ctx(ctx context.Context) contextCache {
+func Ctx(ctx context.Context) ContextCache {
 	v := ctx.Value(ctxKey{})
 	if v == nil {
-		return newContextCache()
+		return ContextCache{
+			values: map[string]any{},
+		}
 	}
-	c, _ := v.(contextCache)
+	c, _ := v.(ContextCache)
 	return c
 }
