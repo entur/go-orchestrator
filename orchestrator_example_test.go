@@ -115,7 +115,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 			return err
 		}
 
-		if access == false {
+		if !access {
 			r.Fail("You don't have access to ent-someproject-dev")
 			return nil
 		}

@@ -179,6 +179,8 @@ func Ctx(ctx context.Context) ContextCache {
 			values: map[string]any{},
 		}
 	}
+
+	//nolint:revive
 	c, _ := v.(ContextCache)
 	return c
 }

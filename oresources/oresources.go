@@ -22,16 +22,16 @@ import (
 // See https://www.alexedwards.net/blog/how-to-properly-parse-a-json-request-body
 func request(ctx context.Context, client *http.Client, method string, url string, headers map[string]string, reqBody any, resBody any) (int, error) {
 	if client == nil {
-		return 0, fmt.Errorf("no client passed to request")
+		return http.StatusInternalServerError, fmt.Errorf("no client passed to request")
 	}
 	enc, err := json.Marshal(reqBody)
 	if err != nil {
-		return 0, fmt.Errorf("http '%s' request body failed to marshal: %w", method, err)
+		return http.StatusInternalServerError, fmt.Errorf("http '%s' request body failed to marshal: %w", method, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(enc))
 	if err != nil {
-		return 0, fmt.Errorf("http '%s' request preparation failed: %w", method, err)
+		return http.StatusInternalServerError, fmt.Errorf("http '%s' request preparation failed: %w", method, err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -41,7 +41,7 @@ func request(ctx context.Context, client *http.Client, method string, url string
 
 	res, err := client.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("http '%s' request failed: %w", method, err)
+		return http.StatusInternalServerError, fmt.Errorf("http '%s' request failed: %w", method, err)
 	}
 	defer func() {
 		_ = res.Body.Close()
@@ -61,6 +61,9 @@ func request(ctx context.Context, client *http.Client, method string, url string
 // -----------------------
 // Resource Clients
 // -----------------------
+
+const defaultTimeout = 10 * time.Second
+const defaultDialerTimeout = 5 * time.Second
 
 type IAMClient struct {
 	client *http.Client
@@ -87,7 +90,7 @@ func (iam *IAMClient) GCPAppProjectIDS(ctx context.Context, appID string) ([]str
 	if err != nil {
 		return nil, err
 	}
-	if status != 200 && status != 404 {
+	if status != http.StatusOK && status != http.StatusNotFound {
 		return nil, err
 	}
 
@@ -120,7 +123,7 @@ func (iam *IAMClient) GCPUserHasRoleInProjects(ctx context.Context, email string
 		if err != nil {
 			return false, err
 		}
-		if status != 200 {
+		if status != http.StatusOK {
 			return false, nil
 		}
 	}
@@ -148,7 +151,7 @@ func (iam *IAMClient) EntraIDUserGroups(ctx context.Context, email string) ([]st
 	if err != nil {
 		return nil, err
 	}
-	if status != 200 {
+	if status != http.StatusOK {
 		return nil, err
 	}
 
@@ -157,6 +160,8 @@ func (iam *IAMClient) EntraIDUserGroups(ctx context.Context, email string) ([]st
 
 type IAMClientOption = idtoken.ClientOption
 
+// NewIAMClient returns a http client which can be used against the IAM Lookup Resource.
+// It can also be used along with NewMockIAMServer for local client -> server testing.
 func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IAMClient, error) {
 	logger := logging.Ctx(ctx)
 
@@ -169,10 +174,10 @@ func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IA
 
 		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAM")
 		client = &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: defaultTimeout,
 			Transport: &http.Transport{
 				Dial: (&net.Dialer{
-					Timeout: 5 * time.Second,
+					Timeout: defaultDialerTimeout,
 				}).Dial,
 			},
 		}

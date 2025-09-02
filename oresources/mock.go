@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // -----------------------
@@ -36,6 +37,8 @@ func enforceJSON(next http.Handler) http.Handler {
 // -----------------------
 // Resource Servers
 // -----------------------
+
+const defaultReadHeaderTimeout = 10 * time.Second
 
 type MockIAMServer struct {
 	server           *http.Server
@@ -181,6 +184,8 @@ func WithUserGroups(email string, groups []string) MockIAMServerOption {
 	}
 }
 
+// NewMockIAMServer returns a new mock server which mimics the functionality of the IAM Lookup resource.
+// It can be used along with NewIAMClient for local client -> server testing.
 func NewMockIAMServer(opts ...MockIAMServerOption) (*MockIAMServer, error) {
 	s := &MockIAMServer{
 		appIDProjects:    map[string][]string{},
@@ -202,7 +207,8 @@ func NewMockIAMServer(opts ...MockIAMServerOption) (*MockIAMServer, error) {
 	mux.Handle("POST /groups/entraid", enforceJSON(http.HandlerFunc(s.hEntraIDUserGroups)))
 
 	s.server = &http.Server{
-		Handler: mux,
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
+		Handler:           mux,
 	}
 
 	return s, nil

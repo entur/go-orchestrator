@@ -1,0 +1,47 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - gocritic
+    - gosec
+    - unconvert
+    - revive
+    - mnd
+  exclusions:
+    presets:
+      - comments
+  settings:
+    mnd:
+      ignored-files:
+        - ".*_test.go" # don't include magic numbers tests in test files
+    revive:
+      enable-all-rules: true
+      rules:
+        - name: cognitive-complexity # Has the opposite effect of making logic harder to follow
+          disabled: true
+        - name: cyclomatic # Has the opposite effect of making logic harder to follow
+          disabled: true
+        - name: max-public-structs # Simply annoying
+          disabled: true
+        - name: line-length-limit # Simply annoying
+          disabled: true
+        - name: unused-receiver # Simply annoying
+          disabled: true
+        - name: unused-parameter # Simply annoying
+          disabled: true
+        - name: confusing-naming # Simply annoying
+          disabled: true
+        - name: add-constant # Simply annoying, as it prevents the use of 'return 0' statements
+          disabled: true
+        - name: use-errors-new # Prevents the use of fmt.Errorf, causing a sometimes confusing mix of fmt.Errorf and errors.New
+          disabled: true
+        - name: unnecessary-format # Prevents the use of fmt.Errorf, causing a sometimes confusing mix of fmt.Errorf and errors.New
+          disabled: true
+        - name: var-naming # Makes json <-> struct relationships more confusing
+          disabled: true
+        - name: function-length
+          disabled: true
+formatters:
+  enable:
+    - gofmt
+    - goimports

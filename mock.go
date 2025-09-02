@@ -7,18 +7,18 @@ import (
 	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 )
 
-const DefaultMockRequestID = "mockid"
-const DefaultMockResponseTopic = "mocktopic"
-const DefaultMockPullRequestState = PullRequestStateOpen
-const DefaultMockRepositoryName = "mockrepo"
-const DefaultMockRepositoryFullName = "entur/mockrepo"
-const DefaultMockDefaultBranch = "main"
-const DefaultMockRepositoryVisibility = RepositoryVisbilityPublic
-const DefaultMockSenderType = SenderTypeUser
-const DefaultMockUsername = "mockuser"
-const DefaultMockUserEmail = "mockuser@entur.io"
-const DefaultMockUserPermission = RepositoryPermissionAdmin
-const DefaultMockAction = ActionPlan
+const DefaultMockRequestID = "mockid"                             // Default Request ID used in PO request mocks.
+const DefaultMockResponseTopic = "mocktopic"                      // Default Topic ID used in PO request mocks.
+const DefaultMockPullRequestState = PullRequestStateOpen          // Default Pull Request state used in PO request mocks.
+const DefaultMockRepositoryName = "mockrepo"                      // Default Repository name used in PO request mocks.
+const DefaultMockRepositoryFullName = "entur/mockrepo"            // Default Repository full name used in PO request mocks.
+const DefaultMockDefaultBranch = "main"                           // Default Repository branch used in PO request mocks.
+const DefaultMockRepositoryVisibility = RepositoryVisbilityPublic // Default Repository visibility used in PO request mocks.
+const DefaultMockSenderType = SenderTypeUser                      // Default Repository branch used in PO request mocks.
+const DefaultMockUsername = "mockuser"                            // Default Github username used in PO request mocks.
+const DefaultMockUserEmail = "mockuser@entur.io"                  // Default verified user email used in PO request mocks.
+const DefaultMockUserPermission = RepositoryPermissionAdmin       // Default Repository permissions used in PO request mocks.
+const DefaultMockAction = ActionPlan                              // Default User action used in PO request mocks.
 
 type MockRequestOption func(*Request)
 

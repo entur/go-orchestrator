@@ -12,17 +12,17 @@ import (
 // Platform Orchestrator
 // -----------------------
 
-type ApiVersion string
+type ApiVersion string // Platform Orchestrator / Sub-Orchestrator ApiVersion
 
 const (
-	ApiVersionOrchestratorResponseV1 ApiVersion = "orchestrator.entur.io/request/v1"
-	ApiVersionOrchestratorRequestV1  ApiVersion = "orchestrator.entur.io/response/v1"
+	ApiVersionOrchestratorResponseV1 ApiVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
+	ApiVersionOrchestratorRequestV1  ApiVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
 )
 
-type Kind string
+type Kind string // Sub-Orchestrator Manifest Kind
 
 type OuterMetadata struct {
-	RequestID string `json:"requestId"`
+	RequestID string `json:"requestId"` // Request ID specified by PO used to identify track the user request
 }
 
 type ResultCode string
@@ -34,10 +34,8 @@ const (
 	ResultCodeError   ResultCode = "error"   // Sub-Orchestrator experienced an internal error when processing the action
 )
 
-type Output string
-
 type Resource struct {
-	Url string `json:"url"`
+	Url string `json:"url"` // 'https://eu-west1.cloudfunctions.net/someresource'
 }
 
 type ResourceIAM = Resource
@@ -86,7 +84,7 @@ const (
 )
 
 type PullRequest struct {
-	ID      int              `json:"id"` // '123123145'
+	ID      int              `json:"id"`    // '123123145'
 	State   PullRequestState `json:"state"` // 'open'
 	Ref     string           `json:"ref"`
 	Title   string           `json:"title"` // 'chore: Added .entur manifests'
@@ -106,8 +104,8 @@ type Origin struct {
 type SenderType string
 
 const (
-	SenderTypeUser SenderType = "user"
-	SenderTypeBot  SenderType = "bot"
+	SenderTypeUser SenderType = "user" // Github user
+	SenderTypeBot  SenderType = "bot"  //
 )
 
 type RepositoryPermission string
@@ -129,8 +127,8 @@ type Sender struct {
 }
 
 type ManifestHeader struct {
-	ApiVersion ApiVersion `json:"apiVersion"`
-	Kind       Kind       `json:"kind"`
+	ApiVersion ApiVersion `json:"apiVersion"` // 'orchestrator.entur.io/mysuborchestrator/v1'
+	Kind       Kind       `json:"kind"`       // 'mymanifestkind'
 }
 
 type Manifest = json.RawMessage
@@ -141,7 +139,7 @@ type Manifests struct {
 }
 
 type Request struct {
-	ApiVersion    ApiVersion    `json:"apiVersion"`
+	ApiVersion    ApiVersion    `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
 	Metadata      OuterMetadata `json:"metadata"`
 	Resources     Resources     `json:"resources"`
 	ResponseTopic string        `json:"responseTopic"`
@@ -152,9 +150,9 @@ type Request struct {
 }
 
 type Response struct {
-	ApiVersion ApiVersion    `json:"apiVersion"`
+	ApiVersion ApiVersion    `json:"apiVersion"` // 'orchestrator.entur.io/response/v1'
 	Metadata   OuterMetadata `json:"metadata"`
-	ResultCode ResultCode    `json:"result"`
+	ResultCode ResultCode    `json:"result"` // 'success'
 	Output     string        `json:"output"`
 }
 
@@ -317,9 +315,9 @@ func (r *Result) Delete(change ...any) {
 	for _, val := range change {
 		switch v := val.(type) {
 		case string:
-			r.updates = append(r.deletions, simpleChange{v})
+			r.deletions = append(r.deletions, simpleChange{v})
 		case Change:
-			r.updates = append(r.deletions, v)
+			r.deletions = append(r.deletions, v)
 		default:
 			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that is not of 'string' or 'Change' type"))
 		}

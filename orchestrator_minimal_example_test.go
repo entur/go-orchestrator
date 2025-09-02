@@ -38,7 +38,7 @@ func (h *MinimalHandler) Kind() orchestrator.Kind {
 	return "Example"
 }
 
-func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest MinimalManifest
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
@@ -52,11 +52,11 @@ func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r 
 	return nil
 }
 
-func (so *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("plandestroy not implemented")
 }
 
-func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest MinimalManifest
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
@@ -70,7 +70,7 @@ func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r
 	return nil
 }
 
-func (so *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("destroy not implemented")
 }
 
