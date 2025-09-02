@@ -258,10 +258,16 @@ func (r *Result) Create(change ...any) {
 		switch v := val.(type) {
 		case string:
 			r.creations = append(r.creations, simpleChange{v})
+		case []string:
+			for _, str := range v {
+				r.creations = append(r.creations, simpleChange{str})
+			}
 		case Change:
 			r.creations = append(r.creations, v)
+		case []Change:
+			r.creations = append(r.creations, v...)
 		default:
-			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that is not of 'string' or 'Change' type"))
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that is not of 'string', '[]string', 'Change' or '[]Change' type"))
 		}
 	}
 }
@@ -287,10 +293,16 @@ func (r *Result) Update(change ...any) {
 		switch v := val.(type) {
 		case string:
 			r.updates = append(r.updates, simpleChange{v})
+		case []string:
+			for _, str := range v {
+				r.updates = append(r.updates, simpleChange{str})
+			}
 		case Change:
 			r.updates = append(r.updates, v)
+		case []Change:
+			r.updates = append(r.updates, v...)
 		default:
-			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that is not of 'string' or 'Change' type"))
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that is not of 'string', '[]string', 'Change' or '[]Change' type"))
 		}
 	}
 }
@@ -316,10 +328,16 @@ func (r *Result) Delete(change ...any) {
 		switch v := val.(type) {
 		case string:
 			r.deletions = append(r.deletions, simpleChange{v})
+		case []string:
+			for _, str := range v {
+				r.deletions = append(r.deletions, simpleChange{str})
+			}
 		case Change:
 			r.deletions = append(r.deletions, v)
+		case []Change:
+			r.deletions = append(r.deletions, v...)
 		default:
-			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that is not of 'string' or 'Change' type"))
+			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that is not of 'string', '[]string', 'Change' or '[]Change' type"))
 		}
 	}
 }
