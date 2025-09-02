@@ -15,8 +15,8 @@ import (
 type APIVersion string // Platform Orchestrator / Sub-Orchestrator ApiVersion
 
 const (
-	ApiVersionOrchestratorResponseV1 APIVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
-	ApiVersionOrchestratorRequestV1  APIVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
+	APIVersionOrchestratorResponseV1 APIVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
+	APIVersionOrchestratorRequestV1  APIVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
 )
 
 type Kind string // Sub-Orchestrator Manifest Kind
