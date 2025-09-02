@@ -23,7 +23,7 @@ Then you will need at least one `ManifestHandler`:
 ```go
 type ManifestHandler interface {
 
-	APIVersion() APIVersion // Which ApiVersion this handler operates on
+	APIVersion() APIVersion // Which APIVersion this handler operates on
 	Kind() Kind             // Which Kind this handler operates on
 	// Actions
 	Plan(context.Context, Request, *Result) error

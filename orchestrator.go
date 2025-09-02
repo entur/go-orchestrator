@@ -12,7 +12,7 @@ import (
 // Platform Orchestrator
 // -----------------------
 
-type APIVersion string // Platform Orchestrator / Sub-Orchestrator ApiVersion
+type APIVersion string // Platform Orchestrator / Sub-Orchestrator APIVersion
 
 const (
 	APIVersionOrchestratorResponseV1 APIVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
@@ -170,7 +170,7 @@ type MiddlewareAfter interface {
 	MiddlewareAfter(context.Context, Request, *Result) error
 }
 
-// The ManifestHandler interface represents the logic used for handling a specific ApiVersion and Kind.
+// The ManifestHandler interface represents the logic used for handling a specific APIVersion and Kind.
 type ManifestHandler interface {
 	// Which APIVersion and Kind this handler operates on
 	APIVersion() APIVersion
