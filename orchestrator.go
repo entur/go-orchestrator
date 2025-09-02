@@ -64,12 +64,12 @@ const (
 )
 
 type Repository struct {
-	ID            int                  `json:"id"`            // E.g. '123123145'
-	Name          string               `json:"name"`          // E.g. 'some-remo'
-	FullName      string               `json:"fullName"`      // E.g. 'entur/some-repo'
-	DefaultBranch string               `json:"defaultBranch"` // E.g. 'main'
-	HtmlUrl       string               `json:"htmlUrl"`       // E.g. 'https://github.com/entur/some-repo'
-	Visibility    RepositoryVisibility `json:"visibility"`    // E.g. 'public'
+	ID            int                  `json:"id"`            // '123123145'
+	Name          string               `json:"name"`          // 'some-remo'
+	FullName      string               `json:"fullName"`      // 'entur/some-repo'
+	DefaultBranch string               `json:"defaultBranch"` // 'main'
+	HtmlUrl       string               `json:"htmlUrl"`       // 'https://github.com/entur/some-repo'
+	Visibility    RepositoryVisibility `json:"visibility"`    // 'public'
 }
 
 type FileChanges struct {
@@ -87,9 +87,9 @@ const (
 
 type PullRequest struct {
 	ID      int              `json:"id"`
-	State   PullRequestState `json:"state"`
+	State   PullRequestState `json:"state"` // 'open'
 	Ref     string           `json:"ref"`
-	Title   string           `json:"title"`
+	Title   string           `json:"title"` // 'chore: Added .entur manifests'
 	Body    string           `json:"body"`
 	Number  int              `json:"number"`
 	Labels  []string         `json:"labels"`
@@ -98,7 +98,7 @@ type PullRequest struct {
 
 type Origin struct {
 	FileName    string      `json:"fileName"`
-	Repository  Repository  `json:"repository"`
+	Repository  Repository  `json:"repository"` // 'https://github.com/entur/some-repo'
 	FileChanges FileChanges `json:"fileChanges"`
 	PullRequest PullRequest `json:"pullRequest"`
 }
@@ -121,11 +121,11 @@ const (
 )
 
 type Sender struct {
-	Username   string               `json:"githubLogin"`
-	Email      string               `json:"githubEmail"`
+	Username   string               `json:"githubLogin"` // 'mockuser'
+	Email      string               `json:"githubEmail"` // 'mockuser@entur.org'
 	ID         int                  `json:"githubId"`
-	Permission RepositoryPermission `json:"githubRepositoryPermission"`
-	Type       SenderType           `json:"type"`
+	Permission RepositoryPermission `json:"githubRepositoryPermission"` // 'admin'
+	Type       SenderType           `json:"type"`                       // 'user'
 }
 
 type ManifestHeader struct {
@@ -159,21 +159,22 @@ type Response struct {
 }
 
 // -----------------------
-// Sub Orchestrator
+// Sub-Orchestrator
 // -----------------------
 
-type Middleware = func(context.Context, Request, *Result) error
-
+// The MiddlewareBefore interface represents the middleware running before every manifest event and/or a specific handler.
 type MiddlewareBefore interface {
 	MiddlewareBefore(context.Context, Request, *Result) error
 }
 
+// The MiddlewareAfter interface represents the middleware running after every manifest event and/or a specific handler.
 type MiddlewareAfter interface {
 	MiddlewareAfter(context.Context, Request, *Result) error
 }
 
+// The ManifestHandler interface represents the logic used for handling a specific ApiVersion and Kind.
 type ManifestHandler interface {
-	// Which ApiVersion and Kind this handler correlates with
+	// Which ApiVersion and Kind this handler operates on
 	ApiVersion() ApiVersion
 	Kind() Kind
 	// Actions
@@ -183,15 +184,18 @@ type ManifestHandler interface {
 	Destroy(context.Context, Request, *Result) error
 }
 
+// The Orchestrator interface represents the main configuration of a sub-orchestrator in a Project.
 type Orchestrator interface {
 	ProjectID() string           // The project this orchestrator is running in
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 
+// The Change interface represents a planned/applied change in the context of a sub-orchestrator.
 type Change interface {
 	String() string
 }
 
+// Internal only struct used to represent simple string changes.
 type simpleChange struct {
 	text string
 }
@@ -215,19 +219,30 @@ func (r *Result) Errors() []error {
 	return r.errs
 }
 
-// Is the result locked for further changes
+// Is the result locked for any further changes.
 func (r *Result) Locked() bool {
 	return r.locked
 }
 
-// Mark result as done.
-func (r *Result) Done(success bool, summary string) {
+// Mark the result as having succeeded.
+func (r *Result) Succeed(summary string) {
 	if r.locked {
-		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as done"))
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as succeeded"))
 	} else {
 		r.locked = true
 		r.summary = summary
-		r.success = success
+		r.success = true
+	}
+}
+
+// Mark the result as having failed.
+func (r *Result) Fail(summary string) {
+	if r.locked {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to mark a locked result as failed"))
+	} else {
+		r.locked = true
+		r.summary = summary
+		r.success = false
 	}
 }
 
@@ -346,8 +361,11 @@ func (r *Result) Output() string {
 
 	var builder strings.Builder
 
-	builder.WriteString(r.summary)
-	builder.WriteString("\n")
+	if r.summary != "" {
+		builder.WriteString(r.summary)
+		builder.WriteString("\n")
+	}
+
 	if len(r.creations) > 0 {
 		builder.WriteString("Create:\n")
 		for _, create := range r.creations {
