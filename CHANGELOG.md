@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/entur/go-orchestrator/compare/v1.4.0...v1.5.0) (2025-09-02)
+
+
+### Features
+
+* Better Go-Orchestrator SDK experience ([#57](https://github.com/entur/go-orchestrator/issues/57)) ([110e09e](https://github.com/entur/go-orchestrator/commit/110e09e3320de8681dd69708a29a7bba5397d110))
+
 ## [1.4.0](https://github.com/entur/go-orchestrator/compare/v1.3.0...v1.4.0) (2025-08-11)
 
 
