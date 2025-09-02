@@ -1,42 +1,79 @@
 package orchestrator
 
 import (
+	"encoding/base64"
 	"encoding/json"
+
+	cloudevent "github.com/cloudevents/sdk-go/v2/event"
 )
 
-const MockUserEmail = "mockuser@entur.io"
+const DefaultMockRequestID = "mockid"                             // Default Request ID used in PO request mocks.
+const DefaultMockResponseTopic = "mocktopic"                      // Default Topic ID used in PO request mocks.
+const DefaultMockPullRequestState = PullRequestStateOpen          // Default Pull Request state used in PO request mocks.
+const DefaultMockRepositoryName = "mockrepo"                      // Default Repository name used in PO request mocks.
+const DefaultMockRepositoryFullName = "entur/mockrepo"            // Default Repository full name used in PO request mocks.
+const DefaultMockDefaultBranch = "main"                           // Default Repository branch used in PO request mocks.
+const DefaultMockRepositoryVisibility = RepositoryVisbilityPublic // Default Repository visibility used in PO request mocks.
+const DefaultMockSenderType = SenderTypeUser                      // Default Repository branch used in PO request mocks.
+const DefaultMockUsername = "mockuser"                            // Default Github username used in PO request mocks.
+const DefaultMockUserEmail = "mockuser@entur.io"                  // Default verified user email used in PO request mocks.
+const DefaultMockUserPermission = RepositoryPermissionAdmin       // Default Repository permissions used in PO request mocks.
+const DefaultMockAction = ActionPlan                              // Default User action used in PO request mocks.
 
 type MockRequestOption func(*Request)
 
-func NewMockRequest(manifest any, sender SenderType, action Action, opts ...MockRequestOption) (*Request, error) {
+func WithAction(action Action) MockRequestOption {
+	return func(req *Request) {
+		req.Action = action
+	}
+}
+
+func WithSender(sender Sender) MockRequestOption {
+	return func(req *Request) {
+		req.Sender = sender
+	}
+}
+
+func WithIAMEndpoint(url string) MockRequestOption {
+	return func(req *Request) {
+		req.Resources.IAM.URL = url
+	}
+}
+
+func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 	newManifest, err := json.Marshal(manifest)
 	if err != nil {
 		return nil, err
 	}
 
 	req := &Request{
-		ApiVersion: "orchestrator.entur.io/request/v1",
+		APIVersion: "orchestrator.entur.io/request/v1",
 		Metadata: OuterMetadata{
-			RequestID: "mockid",
+			RequestID: DefaultMockRequestID,
 		},
 		Origin: Origin{
-			Repository: GitRepository{
-				DefaultBranch: "main",
-				Visibility:    GitRepositoryVisbilityPublic,
+			PullRequest: PullRequest{
+				State: DefaultMockPullRequestState,
+			},
+			Repository: Repository{
+				Name:          DefaultMockRepositoryName,
+				FullName:      DefaultMockRepositoryFullName,
+				DefaultBranch: DefaultMockDefaultBranch,
+				Visibility:    DefaultMockRepositoryVisibility,
 			},
 		},
 		Sender: Sender{
-			Type: sender,
+			Username:   DefaultMockUsername,
+			Email:      DefaultMockUserEmail,
+			Type:       DefaultMockSenderType,
+			Permission: DefaultMockUserPermission,
 		},
-		Action:        action,
-		ResponseTopic: "topic",
+		Action:        DefaultMockAction,
+		ResponseTopic: DefaultMockResponseTopic,
 		Manifest: Manifests{
 			Old: nil,
 			New: newManifest,
 		},
-	}
-	if sender == SenderTypeUser {
-		req.Sender.Email = MockUserEmail
 	}
 
 	for _, opt := range opts {
@@ -44,4 +81,35 @@ func NewMockRequest(manifest any, sender SenderType, action Action, opts ...Mock
 	}
 
 	return req, err
+}
+
+func NewMockCloudEvent(manifest any, opts ...MockRequestOption) (*cloudevent.Event, error) {
+	req, err := NewMockRequest(manifest, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	reqdata, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := make([]byte, base64.StdEncoding.EncodedLen(len(reqdata)))
+	base64.StdEncoding.Encode(buf, reqdata)
+	data, err := json.Marshal(&CloudEventData{
+		Message: PubSubMessage{
+			Data:        reqdata,
+			ID:          "id",
+			PublishTime: "time",
+			Attributes:  PubSubMessageAttributes{},
+		},
+		Subscription: "sub",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	e := cloudevent.New(cloudevent.CloudEventsVersionV03)
+	e.DataEncoded = data
+	return &e, nil
 }

@@ -7,8 +7,7 @@ import (
 
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/event"
-	"github.com/entur/go-orchestrator/resources"
+	"github.com/entur/go-orchestrator/oresources"
 )
 
 type ExampleSpecV1 struct {
@@ -29,7 +28,7 @@ type ExampleManifestV1Handler struct {
 	/* you can have some internal state here */
 }
 
-func (h *ExampleManifestV1Handler) ApiVersion() orchestrator.ApiVersion {
+func (h *ExampleManifestV1Handler) APIVersion() orchestrator.APIVersion {
 	return "orchestrator.entur.io/example/v1"
 }
 
@@ -55,7 +54,7 @@ func (h *ExampleManifestV1Handler) Plan(ctx context.Context, req orchestrator.Re
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Succeed("Plan all the things")
 	return nil
 }
 
@@ -73,7 +72,7 @@ func (h *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.R
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Succeed("Plan all the things")
 	return nil
 }
 
@@ -99,14 +98,14 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 	logger := logging.Ctx(ctx)
 
 	logger.Info().Msg("Before it begins")
-	if req.Origin.Repository.Visibility != orchestrator.GitRepositoryVisbilityPublic {
-		r.Done("This sub-orchestrator only accepts manifests in public repositories", false)
+	if req.Origin.Repository.Visibility != orchestrator.RepositoryVisbilityPublic {
+		r.Fail("This sub-orchestrator only accepts manifests in public repositories")
 		return nil
 	}
 
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
-		client, err := resources.NewIAMLookupClient(ctx, req.Resources.IAM.Url)
+		client, err := oresources.NewIAMClient(ctx, req.Resources.IAM.URL)
 		if err != nil {
 			return err
 		}
@@ -116,14 +115,14 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 			return err
 		}
 
-		if access == false {
-			r.Done("You don't have access to ent-someproject-dev", false)
+		if !access {
+			r.Fail("You don't have access to ent-someproject-dev")
 			return nil
 		}
 	}
 
 	// The cache is shared between middlewares and handlers!
-	cache := orchestrator.CtxCache(ctx)
+	cache := orchestrator.Ctx(ctx)
 	cache.Set("cache_key", "something something!")
 
 	return nil
@@ -133,7 +132,7 @@ func (so ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request,
 	logger := logging.Ctx(ctx)
 	logger.Info().Msg("Auditing this thing")
 
-	cache := orchestrator.CtxCache(ctx)
+	cache := orchestrator.Ctx(ctx)
 	value := cache.Get("cache_key")
 	if str, ok := value.(string); ok {
 		logger.Info().Msgf("Got value from cache: %s", str)
@@ -160,74 +159,81 @@ func Example() {
 	// Usually you would setup the sub-orchestrator inside an init function like so:
 	//
 	// 	func init() {
-	//			handler := orchestrator.NewEventHandler(so)
+	// 			so := NewSO()
+	//			handler := orchestrator.NewCloudEventHandler(so)
 	//	    	functions.CloudEvent("OrchestratorEvent", handler)
 	//	}
 	//
 	// However, here we are configuring and executing it as part of an example test.
 
-	writer := logging.NewConsoleWriter(logging.WithNoColor(), logging.WithNoTimestamp())
-	logger := logging.New(logging.WithWriter(writer))
+	logger := logging.New(
+		logging.WithWriter(
+			logging.NewConsoleWriter(
+				logging.WithNoColor(),
+				logging.WithNoTimestamp(),
+			),
+		),
+	)
+
+	iamServer, _ := oresources.NewMockIAMServer(
+		oresources.WithPort(8001),
+		oresources.WithUserProjectRoles(
+			orchestrator.DefaultMockUserEmail,
+			"ent-someproject-dev",
+			[]string{"your_so_role"},
+		),
+	)
+
+	err := iamServer.Start()
+	if err != nil {
+		logger.Panic().Err(err).Send()
+	}
+	defer func() {
+		err := iamServer.Stop()
+		if err != nil {
+			logger.Panic().Err(err).Send()
+		}
+	}()
 
 	so := NewExampleSO("mysoproject")
+	handler := orchestrator.NewCloudEventHandler(so,
+		orchestrator.WithCustomLogger(logger),
+		orchestrator.WithCustomPubSubClient(nil),
+	)
 
 	manifest := ExampleManifestV1{
+		ManifestHeader: orchestrator.ManifestHeader{
+			APIVersion: so.handlers[0].APIVersion(),
+			Kind:       so.handlers[0].Kind(),
+		},
 		Spec: ExampleSpecV1{
 			Name: "Test Name",
 		},
 		Metadata: ExampleMetadataV1{
 			ID: "manifestid",
 		},
-		ManifestHeader: orchestrator.ManifestHeader{
-			ApiVersion: so.handlers[0].ApiVersion(),
-			Kind:       so.handlers[0].Kind(),
-		},
 	}
+	e, _ := orchestrator.NewMockCloudEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.URL()))
 
-	iamServer, _ := resources.NewMockIAMLookupServer(
-		resources.WithPort(8001),
-		resources.WithUserProjectRoles(
-			orchestrator.MockUserEmail,
-			"ent-someproject-dev",
-			[]string{"your_so_role"},
-		),
-	)
-
-	iamServer.Start()
-	defer iamServer.Stop()
-
-	// Optional modifier of your mockevent
-	mockEventModifier := func(r *orchestrator.Request) {
-		r.Metadata.RequestID = "ExampleId"
-		r.Resources.IAM.Url = iamServer.Url()
-	}
-
-	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan, mockEventModifier)
-	handler := event.NewEventHandler(so, event.WithCustomLogger(logger))
-	// functions.CloudEvent("OrchestratorEvent", handler)
-
-	err := handler(context.Background(), *e)
-
+	err = handler(context.Background(), *e)
 	if err != nil {
 		logger.Error().Err(err).Msg("Encountered error")
 	}
 
 	// Output:
-	// DBG Created a new EventHandler
-	// INF Received and processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"ExampleId"},"origin":{"fileName":"","repository":{"defaultBranch":"main","fullName":"","htmlUrl":"","id":0,"name":"","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"topic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"type":"user"}} gorch_request_id=ExampleId
-	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing Orchestrator (mysoproject) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) MiddlewareBefore gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// DBG Executing Orchestrator (mysoproject) MiddlewareAfter gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// INF Sending response gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId gorch_response={"apiVersion":"orchestrator.entur.io/response/v1","metadata":{"requestId":"ExampleId"},"output":"UGxhbiBhbGwgdGhlIHRoaW5ncwpDcmVhdGVkOgorIEEgdGhpbmcKVXBkYXRlZDoKISBBIHRoaW5nCkRlbGV0ZWQ6Ci0gQSB0aGluZwo=","result":"success"}
-	// ERR Encountered an internal error whilst responding to request error="no topic set, unable to respond" gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=ExampleId
-	// ERR Encountered error error="no topic set, unable to respond"
+	// DBG Created a new CloudEventHandler
+	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileChanges":{"bloblUrl":"","contentsUrl":"","rawUrl":""},"fileName":"","pullRequest":{"body":"","htmlUrl":"","id":0,"labels":null,"number":0,"ref":"","state":"open","title":""},"repository":{"defaultBranch":"main","fullName":"entur/mockrepo","htmlUrl":"","id":0,"name":"mockrepo","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"githubLogin":"mockuser","githubRepositoryPermission":"admin","type":"user"}} gorch_request_id=mockid
+	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing Orchestrator MiddlewareBefore (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAM gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing ManifestHandler MiddlewareBefore (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Executing Orchestrator MiddlewareAfter (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// WRN Pubsub client is set to null, no responses will be sent gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=[{}] gorch_result_deletions=[{}] gorch_result_summary="Plan all the things" gorch_result_updates=[{}]
 }

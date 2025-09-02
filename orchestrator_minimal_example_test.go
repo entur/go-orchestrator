@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/event"
 )
 
 type MinimalMetadata struct {
@@ -31,7 +30,7 @@ type MinimalHandler struct {
 	/* you can have some internal state here */
 }
 
-func (h *MinimalHandler) ApiVersion() orchestrator.ApiVersion {
+func (h *MinimalHandler) APIVersion() orchestrator.APIVersion {
 	return "orchestrator.entur.io/example/v1"
 }
 
@@ -39,7 +38,7 @@ func (h *MinimalHandler) Kind() orchestrator.Kind {
 	return "Example"
 }
 
-func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest MinimalManifest
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
@@ -49,15 +48,15 @@ func (so *MinimalHandler) Plan(ctx context.Context, req orchestrator.Request, r 
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Plan all the things", true)
+	r.Succeed("Plan all the things")
 	return nil
 }
 
-func (so *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("plandestroy not implemented")
 }
 
-func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest MinimalManifest
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
@@ -67,11 +66,11 @@ func (so *MinimalHandler) Apply(ctx context.Context, req orchestrator.Request, r
 	r.Create("A thing")
 	r.Update("A thing")
 	r.Delete("A thing")
-	r.Done("Applied all the things", true)
+	r.Succeed("Applied all the things")
 	return nil
 }
 
-func (so *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+func (h *MinimalHandler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	return fmt.Errorf("destroy not implemented")
 }
 
@@ -105,32 +104,32 @@ func ExampleMinimalSO() {
 	// Usually you would setup the sub-orchestrator inside an init function like so:
 	//
 	// 	func init() {
-	//			handler := orchestrator.NewEventHandler(so)
+	// 			so := NewSO()
+	//			handler := orchestrator.NewCloudEventHandler(so)
 	//	    	functions.CloudEvent("OrchestratorEvent", handler)
 	//	}
 	//
 	// However, here we are configuring and executing it as part of an example test.
 
 	so := NewMinimalExampleSO("mysoproject")
+	handler := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomPubSubClient(nil))
 
 	manifest := MinimalManifest{
 		ManifestHeader: orchestrator.ManifestHeader{
-			ApiVersion: so.handlers[0].ApiVersion(),
+			APIVersion: so.handlers[0].APIVersion(),
 			Kind:       so.handlers[0].Kind(),
 		},
 		Spec: MinimalSpec{
 			Name: "Test Name",
 		},
 	}
-
-	e, _ := event.NewMockEvent(manifest, orchestrator.SenderTypeUser, orchestrator.ActionPlan)
-	handler := event.NewEventHandler(so)
+	e, _ := orchestrator.NewMockCloudEvent(manifest)
 
 	err := handler(context.Background(), *e)
-
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	// Output:
-	// no topic set, unable to respond
+	//
 }
