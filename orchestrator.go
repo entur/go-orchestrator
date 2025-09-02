@@ -12,11 +12,11 @@ import (
 // Platform Orchestrator
 // -----------------------
 
-type ApiVersion string // Platform Orchestrator / Sub-Orchestrator ApiVersion
+type APIVersion string // Platform Orchestrator / Sub-Orchestrator ApiVersion
 
 const (
-	ApiVersionOrchestratorResponseV1 ApiVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
-	ApiVersionOrchestratorRequestV1  ApiVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
+	ApiVersionOrchestratorResponseV1 APIVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
+	ApiVersionOrchestratorRequestV1  APIVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
 )
 
 type Kind string // Sub-Orchestrator Manifest Kind
@@ -35,7 +35,7 @@ const (
 )
 
 type Resource struct {
-	Url string `json:"url"` // 'https://eu-west1.cloudfunctions.net/someresource'
+	URL string `json:"url"` // 'https://eu-west1.cloudfunctions.net/someresource'
 }
 
 type ResourceIAM = Resource
@@ -66,14 +66,14 @@ type Repository struct {
 	Name          string               `json:"name"`          // 'some-remo'
 	FullName      string               `json:"fullName"`      // 'entur/some-repo'
 	DefaultBranch string               `json:"defaultBranch"` // 'main'
-	HtmlUrl       string               `json:"htmlUrl"`       // 'https://github.com/entur/some-repo'
+	HtmlURL       string               `json:"htmlUrl"`       // 'https://github.com/entur/some-repo'
 	Visibility    RepositoryVisibility `json:"visibility"`    // 'public'
 }
 
 type FileChanges struct {
-	ContentsUrl string `json:"contentsUrl"`
-	BlobUrl     string `json:"bloblUrl"`
-	RawUrl      string `json:"rawUrl"`
+	ContentsURL string `json:"contentsUrl"`
+	BlobURL     string `json:"bloblUrl"`
+	RawURL      string `json:"rawUrl"`
 }
 
 type PullRequestState string
@@ -91,7 +91,7 @@ type PullRequest struct {
 	Body    string           `json:"body"`
 	Number  int              `json:"number"`
 	Labels  []string         `json:"labels"`
-	HtmlUrl string           `json:"htmlUrl"`
+	HtmlURL string           `json:"htmlUrl"`
 }
 
 type Origin struct {
@@ -127,7 +127,7 @@ type Sender struct {
 }
 
 type ManifestHeader struct {
-	ApiVersion ApiVersion `json:"apiVersion"` // 'orchestrator.entur.io/mysuborchestrator/v1'
+	APIVersion APIVersion `json:"apiVersion"` // 'orchestrator.entur.io/mysuborchestrator/v1'
 	Kind       Kind       `json:"kind"`       // 'mymanifestkind'
 }
 
@@ -139,7 +139,7 @@ type Manifests struct {
 }
 
 type Request struct {
-	ApiVersion    ApiVersion    `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
+	APIVersion    APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
 	Metadata      OuterMetadata `json:"metadata"`
 	Resources     Resources     `json:"resources"`
 	ResponseTopic string        `json:"responseTopic"`
@@ -150,7 +150,7 @@ type Request struct {
 }
 
 type Response struct {
-	ApiVersion ApiVersion    `json:"apiVersion"` // 'orchestrator.entur.io/response/v1'
+	APIVersion APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/response/v1'
 	Metadata   OuterMetadata `json:"metadata"`
 	ResultCode ResultCode    `json:"result"` // 'success'
 	Output     string        `json:"output"`
@@ -172,8 +172,8 @@ type MiddlewareAfter interface {
 
 // The ManifestHandler interface represents the logic used for handling a specific ApiVersion and Kind.
 type ManifestHandler interface {
-	// Which ApiVersion and Kind this handler operates on
-	ApiVersion() ApiVersion
+	// Which APIVersion and Kind this handler operates on
+	APIVersion() APIVersion
 	Kind() Kind
 	// Actions
 	Plan(context.Context, Request, *Result) error

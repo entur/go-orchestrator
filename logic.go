@@ -24,7 +24,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 	logger := logging.Ctx(ctx)
 
 	project := so.ProjectID()
-	version := h.ApiVersion()
+	version := h.APIVersion()
 	kind := h.Kind()
 	action := req.Action
 
@@ -135,8 +135,8 @@ func Process(ctx context.Context, so Orchestrator, req *Request) Result {
 		match := false
 
 		for _, h := range so.Handlers() {
-			if header.ApiVersion == h.ApiVersion() && header.Kind == h.Kind() {
-				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.ApiVersion, header.Kind)
+			if header.APIVersion == h.APIVersion() && header.Kind == h.Kind() {
+				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.APIVersion, header.Kind)
 				err = process(ctx, so, h, req, &result)
 				match = true
 				break
@@ -144,7 +144,7 @@ func Process(ctx context.Context, so Orchestrator, req *Request) Result {
 		}
 
 		if !match {
-			err = fmt.Errorf("no matching ManifestHandler for (%s, %s)", header.ApiVersion, header.Kind)
+			err = fmt.Errorf("no matching ManifestHandler for (%s, %s)", header.APIVersion, header.Kind)
 		}
 	}
 

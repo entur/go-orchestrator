@@ -116,7 +116,7 @@ func (s *MockIAMServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Requ
 	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMServer) Url() string {
+func (s *MockIAMServer) URL() string {
 	return s.url
 }
 

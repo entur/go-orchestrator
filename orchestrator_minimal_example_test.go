@@ -30,7 +30,7 @@ type MinimalHandler struct {
 	/* you can have some internal state here */
 }
 
-func (h *MinimalHandler) ApiVersion() orchestrator.ApiVersion {
+func (h *MinimalHandler) APIVersion() orchestrator.APIVersion {
 	return "orchestrator.entur.io/example/v1"
 }
 
@@ -116,7 +116,7 @@ func ExampleMinimalSO() {
 
 	manifest := MinimalManifest{
 		ManifestHeader: orchestrator.ManifestHeader{
-			ApiVersion: so.handlers[0].ApiVersion(),
+			APIVersion: so.handlers[0].APIVersion(),
 			Kind:       so.handlers[0].Kind(),
 		},
 		Spec: MinimalSpec{

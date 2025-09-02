@@ -28,7 +28,7 @@ type ExampleManifestV1Handler struct {
 	/* you can have some internal state here */
 }
 
-func (h *ExampleManifestV1Handler) ApiVersion() orchestrator.ApiVersion {
+func (h *ExampleManifestV1Handler) APIVersion() orchestrator.APIVersion {
 	return "orchestrator.entur.io/example/v1"
 }
 
@@ -105,7 +105,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
-		client, err := oresources.NewIAMClient(ctx, req.Resources.IAM.Url)
+		client, err := oresources.NewIAMClient(ctx, req.Resources.IAM.URL)
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func Example() {
 
 	manifest := ExampleManifestV1{
 		ManifestHeader: orchestrator.ManifestHeader{
-			ApiVersion: so.handlers[0].ApiVersion(),
+			APIVersion: so.handlers[0].APIVersion(),
 			Kind:       so.handlers[0].Kind(),
 		},
 		Spec: ExampleSpecV1{
@@ -213,7 +213,7 @@ func Example() {
 			ID: "manifestid",
 		},
 	}
-	e, _ := orchestrator.NewMockCloudEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.Url()))
+	e, _ := orchestrator.NewMockCloudEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.URL()))
 
 	err = handler(context.Background(), *e)
 	if err != nil {
@@ -235,5 +235,5 @@ func Example() {
 	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// WRN Pubsub client is set to null, no responses will be sent gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=[{}] gorch_result_deletions=null gorch_result_summary="Plan all the things" gorch_result_updates=[{}]
+	// WRN Pubsub client is set to null, no responses will be sent gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=[{}] gorch_result_deletions=[{}] gorch_result_summary="Plan all the things" gorch_result_updates=[{}]
 }

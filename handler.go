@@ -132,7 +132,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 			mu.Unlock()
 
 			var res = Response{
-				ApiVersion: ApiVersionOrchestratorResponseV1,
+				APIVersion: ApiVersionOrchestratorResponseV1,
 				Metadata:   req.Metadata,
 				ResultCode: result.Code(),
 				Output:     base64.StdEncoding.EncodeToString([]byte(result.Output())),
