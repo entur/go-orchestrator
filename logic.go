@@ -95,7 +95,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 	}
 
 	if !res.locked {
-		return fmt.Errorf("forgot to call .Done() in manifest handler (%s, %s, %s)", version, kind, action)
+		return fmt.Errorf("forgot to call .Succeed(msg) or .Fail(msg) in manifest handler (%s, %s, %s)", version, kind, action)
 	}
 
 	return nil
