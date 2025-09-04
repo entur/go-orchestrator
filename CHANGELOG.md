@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/entur/go-orchestrator/compare/v1.5.1...v1.6.0) (2025-09-04)
+
+
+### Features
+
+* Added jsonschema validation tags to ManifestHeader ([#62](https://github.com/entur/go-orchestrator/issues/62)) ([7520677](https://github.com/entur/go-orchestrator/commit/7520677279c56d61469a2875dec9945a5a9fc387))
+
 ## [1.5.1](https://github.com/entur/go-orchestrator/compare/v1.5.0...v1.5.1) (2025-09-02)
 
 
