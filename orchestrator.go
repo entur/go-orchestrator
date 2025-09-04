@@ -127,8 +127,8 @@ type Sender struct {
 }
 
 type ManifestHeader struct {
-	APIVersion APIVersion `json:"apiVersion"` // 'orchestrator.entur.io/mysuborchestrator/v1'
-	Kind       Kind       `json:"kind"`       // 'mymanifestkind'
+	APIVersion APIVersion `json:"apiVersion" jsonschema:"required,minLength=1,maxLength=2083,pattern=^orchestrator\\.entur\\.io\\/.*\\/[vV].*$"` // 'orchestrator.entur.io/mysuborchestrator/v1'
+	Kind       Kind       `json:"kind" jsonschema:"required,minLength=2,maxLength=63"`                                                           // 'mymanifestkind'
 }
 
 type Manifest = json.RawMessage
