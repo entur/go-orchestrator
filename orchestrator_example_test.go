@@ -105,7 +105,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
-		client, err := oresources.NewIAMClient(ctx, req.Resources.IAM.URL)
+		client, err := oresources.NewIAMLookupClient(ctx, req.Resources.IAMLookup.URL)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func Example() {
 		),
 	)
 
-	iamServer, _ := oresources.NewMockIAMServer(
+	iamServer, _ := oresources.NewMockIAMLookupServer(
 		oresources.WithPort(8001),
 		oresources.WithUserProjectRoles(
 			orchestrator.DefaultMockUserEmail,

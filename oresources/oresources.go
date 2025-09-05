@@ -65,7 +65,7 @@ func request(ctx context.Context, client *http.Client, method string, url string
 const defaultTimeout = 10 * time.Second
 const defaultDialerTimeout = 5 * time.Second
 
-type IAMClient struct {
+type IAMLookupClient struct {
 	client *http.Client
 	url    string
 }
@@ -79,7 +79,7 @@ type GCPAppProjectsResponse struct {
 }
 
 // List all of the GCP project ids associated with an app-factory id.
-func (iam *IAMClient) GCPAppProjectIDs(ctx context.Context, appID string) ([]string, error) {
+func (iam *IAMLookupClient) GCPAppProjectIDs(ctx context.Context, appID string) ([]string, error) {
 	url := fmt.Sprintf("%s/app/projects/gcp", iam.url)
 	reqBody := GCPAppProjectsRequest{
 		AppID: appID,
@@ -108,7 +108,7 @@ type GCPUserAccessResponse struct {
 }
 
 // Check if the user (email) has the specified Sub-Orchestrator role in *all* of the given GCP projects.
-func (iam *IAMClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, projectIDs ...string) (bool, error) {
+func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email string, role string, projectIDs ...string) (bool, error) {
 	url := fmt.Sprintf("%s/access/gcp", iam.url)
 	reqBody := GCPUserAccessRequest{
 		User: email,
@@ -140,7 +140,7 @@ type EntraIDUserGroupsResponse struct {
 }
 
 // List all of the entra id groups (without the @ suffix) that a user (email) belongs to.
-func (iam *IAMClient) EntraIDUserGroups(ctx context.Context, email string) ([]string, error) {
+func (iam *IAMLookupClient) EntraIDUserGroups(ctx context.Context, email string) ([]string, error) {
 	url := fmt.Sprintf("%s/groups/entraid", iam.url)
 	reqBody := EntraIDUserGroupsRequest{
 		User: email,
@@ -160,9 +160,9 @@ func (iam *IAMClient) EntraIDUserGroups(ctx context.Context, email string) ([]st
 
 type IAMClientOption = idtoken.ClientOption
 
-// NewIAMClient returns a http client which can be used against the IAM Lookup Resource.
+// NewIAMLookupClient returns a http client which can be used against the IAM Lookup Resource.
 // It can also be used along with NewMockIAMServer for local client -> server testing.
-func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IAMClient, error) {
+func NewIAMLookupClient(ctx context.Context, url string, opts ...IAMClientOption) (*IAMLookupClient, error) {
 	logger := logging.Ctx(ctx)
 
 	client, err := idtoken.NewClient(ctx, url, opts...)
@@ -172,7 +172,7 @@ func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IA
 			return nil, fmt.Errorf("unable to create iam client: %w", err)
 		}
 
-		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAM")
+		logger.Debug().Msg("Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup")
 		client = &http.Client{
 			Timeout: defaultTimeout,
 			Transport: &http.Transport{
@@ -183,7 +183,7 @@ func NewIAMClient(ctx context.Context, url string, opts ...IAMClientOption) (*IA
 		}
 	}
 
-	return &IAMClient{
+	return &IAMLookupClient{
 		client: client,
 		url:    url,
 	}, nil

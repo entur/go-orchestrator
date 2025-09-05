@@ -14,49 +14,21 @@ import (
 // -----------------------
 
 type Request struct {
-	APIVersion    APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
-	Metadata      OuterMetadata `json:"metadata"`
-	Resources     Resources     `json:"resources"`
-	ResponseTopic string        `json:"responseTopic"`
 	Action        Action        `json:"action"`
+	APIVersion    APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
+	Manifest      Manifests     `json:"manifest"`
+	Metadata      RequestMetadata `json:"metadata"`
+	Resources     Resources     `json:"resources"`
 	Origin        Origin        `json:"origin"`
 	Sender        Sender        `json:"sender"`
-	Manifest      Manifests     `json:"manifest"`
+	ResponseTopic string        `json:"responseTopic"`
 }
 
 type Response struct {
 	APIVersion APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/response/v1'
-	Metadata   OuterMetadata `json:"metadata"`
+	Metadata   RequestMetadata `json:"metadata"`
 	ResultCode ResultCode    `json:"result"` // 'success'
 	Output     string        `json:"output"`
-}
-
-type ManifestHeader struct {
-	APIVersion APIVersion `json:"apiVersion" jsonschema:"required,minLength=1,maxLength=2083,pattern=^orchestrator\\.entur\\.io\\/.*\\/[vV].*$"` // 'orchestrator.entur.io/mysuborchestrator/v1'
-	Kind       Kind       `json:"kind" jsonschema:"required,minLength=2,maxLength=63"`                                                           // 'mymanifestkind'
-}
-
-type APIVersion string // Platform Orchestrator / Sub-Orchestrator APIVersion
-
-const (
-	APIVersionOrchestratorResponseV1 APIVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
-	APIVersionOrchestratorRequestV1  APIVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
-)
-
-type Kind string // Sub-Orchestrator Manifest Kind
-
-type OuterMetadata struct {
-	RequestID string `json:"requestId"` // Request ID specified by PO used to identify track the user request
-}
-
-type Resources struct {
-	IAM ResourceIAM `json:"iamLookup"`
-}
-
-type ResourceIAM = Resource
-
-type Resource struct {
-	URL string `json:"url"` // 'https://eu-west1.cloudfunctions.net/someresource'
 }
 
 type Action string
@@ -67,6 +39,50 @@ const (
 	ActionPlanDestroy Action = "plan_destroy"
 	ActionDestroy     Action = "destroy"
 )
+
+type APIVersion string // Platform Orchestrator / Sub-Orchestrator APIVersion
+
+const (
+	APIVersionOrchestratorResponseV1 APIVersion = "orchestrator.entur.io/request/v1"  // Platform Orchestrator Request
+	APIVersionOrchestratorRequestV1  APIVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
+)
+
+type ManifestHeader struct {
+	APIVersion APIVersion `json:"apiVersion" jsonschema:"required,minLength=1,maxLength=2083,pattern=^orchestrator\\.entur\\.io\\/.*\\/[vV].*$"` // 'orchestrator.entur.io/mysuborchestrator/v1'
+	Kind       Kind       `json:"kind" jsonschema:"required,minLength=2,maxLength=63"`                                                          // 'mymanifestkind'
+}
+
+type ManifestMetadata struct {
+	ID string `json:"id" jsonschema:"required,minLength=1,maxLength=63"`
+	Name *string `json:"name"`
+	DisplayName *string `json:"displayName"`
+	Description *string `json:"description"`
+	Owner *string `json:"owner"`
+}
+
+type Kind string // Sub-Orchestrator Manifest Kind
+
+type Manifests struct {
+	Old *Manifest `json:"old"`
+	New Manifest  `json:"new"`
+}
+
+type Manifest = json.RawMessage
+
+type RequestMetadata struct {
+	RequestID string `json:"requestId"` // Request ID specified by Platform Orchestrator used to track the user request
+	ContextID string `json:"contextId"` // Context ID specified by Platform Orchestrator used to track the user request
+}
+
+type Resources struct {
+	IAMLookup ResourceIAMLookup `json:"iamLookup"`
+}
+
+type ResourceIAMLookup = Resource
+
+type Resource struct {
+	URL string `json:"url"` // 'https://eu-west1.cloudfunctions.net/someresource'
+}
 
 type Origin struct {
 	FileName    string      `json:"fileName"`
@@ -97,7 +113,6 @@ type FileChanges struct {
 	BlobURL     string `json:"bloblUrl"`
 	RawURL      string `json:"rawUrl"`
 }
-
 
 type PullRequest struct {
 	ID      int              `json:"id"`    // '123123145'
@@ -142,13 +157,6 @@ const (
 	SenderTypeBot  SenderType = "bot"  //
 )
 
-type Manifests struct {
-	Old *Manifest `json:"old"`
-	New Manifest  `json:"new"`
-}
-
-type Manifest = json.RawMessage
-
 type ResultCode string
 
 const (
@@ -170,12 +178,12 @@ func (change simpleChange) String() string {
 	return change.text
 }
 
-func castAnyToChanges(values ...any) ([]Change, bool) {
+func castAnyToChanges(values []any) ([]Change, bool) {
 	changes := make([]Change, 0, len(values))
 	failed := false
 
 loop:
-	for _, value := range values {		
+	for _, value := range values {
 		switch v := value.(type) {
 		case Change:
 			changes = append(changes, v)
@@ -219,7 +227,7 @@ loop:
 		}
 	}
 	
-	return changes, failed
+	return changes, !failed
 }
 
 // -----------------------
