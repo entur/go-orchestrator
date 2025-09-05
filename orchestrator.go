@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"strings"
 
 	"github.com/entur/go-logging"
@@ -157,6 +158,74 @@ type Response struct {
 }
 
 // -----------------------
+// Internal
+// -----------------------
+
+type simpleChange struct {
+	text string
+}
+
+func (change simpleChange) String() string {
+	return change.text
+}
+
+func castAnyToChanges(values ...any) ([]Change, bool) {
+	changes := make([]Change, 0, len(values))
+	failed := false
+
+loop:
+	for _, value := range values {		
+		switch v := value.(type) {
+		case Change:
+			changes = append(changes, v)
+		case []Change:
+			changes = append(changes, v...)
+		case string:
+			changes = append(changes, simpleChange{v})
+		case []string:
+			for _, elem := range v {
+				changes = append(changes, simpleChange{elem})
+			}
+		default:
+			// If the value type does not match any of the above assertions,
+			// it might still be a slice/array of a custom type that matches the Change interface.
+			// Therefore, we have to check if the value is of kind array/slice
+			// and individually perform type assertions for each element.
+			reflectV := reflect.ValueOf(value)
+			if !reflectV.IsValid() {
+				failed = true
+				break loop
+			}
+			
+			kindV := reflectV.Kind()
+			if kindV != reflect.Slice && kindV != reflect.Array {
+				failed = true
+				break loop
+			}
+
+			for i := 0; i < reflectV.Len(); i += 1 {
+				elem :=	reflectV.Index(i).Interface()
+				if elem != nil {
+					tmp, ok := elem.(Change)
+					if !ok {
+						failed = true
+						break loop
+					}
+						
+					changes = append(changes, tmp)
+				}
+			}
+		}
+	}
+
+	if len(changes) == 0 {
+		failed = true
+	}
+	
+	return changes, failed
+}
+
+// -----------------------
 // Sub-Orchestrator
 // -----------------------
 
@@ -191,15 +260,6 @@ type Orchestrator interface {
 // The Change interface represents a planned/applied change in the context of a sub-orchestrator.
 type Change interface {
 	String() string
-}
-
-// Internal only struct used to represent simple string changes.
-type simpleChange struct {
-	text string
-}
-
-func (change simpleChange) String() string {
-	return change.text
 }
 
 type Result struct {
@@ -248,27 +308,17 @@ func (r *Result) Fail(summary string) {
 // Valid change types are:
 // * string
 // * Stringer/Change interface
-func (r *Result) Create(change ...any) {
+func (r *Result) Create(changes ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change to a locked result"))
 		return
 	}
 
-	for _, val := range change {
-		switch v := val.(type) {
-		case string:
-			r.creations = append(r.creations, simpleChange{v})
-		case []string:
-			for _, str := range v {
-				r.creations = append(r.creations, simpleChange{str})
-			}
-		case Change:
-			r.creations = append(r.creations, v)
-		case []Change:
-			r.creations = append(r.creations, v...)
-		default:
-			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that is not of 'string', '[]string', 'Change' or '[]Change' type"))
-		}
+	values, ok := castAnyToChanges(changes)
+	if !ok {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that does not match Change or String constraints"))
+	} else {
+		r.creations = append(r.creations, values...)
 	}
 }
 
@@ -283,27 +333,17 @@ func (r *Result) Creations() []Change {
 // Valid change types are:
 // * string
 // * Stringer/Change interface
-func (r *Result) Update(change ...any) {
+func (r *Result) Update(changes ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change to a locked result"))
 		return
 	}
 
-	for _, val := range change {
-		switch v := val.(type) {
-		case string:
-			r.updates = append(r.updates, simpleChange{v})
-		case []string:
-			for _, str := range v {
-				r.updates = append(r.updates, simpleChange{str})
-			}
-		case Change:
-			r.updates = append(r.updates, v)
-		case []Change:
-			r.updates = append(r.updates, v...)
-		default:
-			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that is not of 'string', '[]string', 'Change' or '[]Change' type"))
-		}
+	values, ok := castAnyToChanges(changes)
+	if !ok {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that does not match Change or String constraints"))
+	} else {
+		r.updates = append(r.updates, values...)
 	}
 }
 
@@ -318,27 +358,17 @@ func (r *Result) Updates() []Change {
 // Valid change types are:
 // * string
 // * Stringer/Change interface
-func (r *Result) Delete(change ...any) {
+func (r *Result) Delete(changes ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change to a locked result"))
 		return
 	}
 
-	for _, val := range change {
-		switch v := val.(type) {
-		case string:
-			r.deletions = append(r.deletions, simpleChange{v})
-		case []string:
-			for _, str := range v {
-				r.deletions = append(r.deletions, simpleChange{str})
-			}
-		case Change:
-			r.deletions = append(r.deletions, v)
-		case []Change:
-			r.deletions = append(r.deletions, v...)
-		default:
-			r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that is not of 'string', '[]string', 'Change' or '[]Change' type"))
-		}
+	values, ok := castAnyToChanges(changes)
+	if !ok {
+		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that does not match Change or String constraints"))
+	} else {
+		r.deletions = append(r.deletions, values...)
 	}
 }
 
