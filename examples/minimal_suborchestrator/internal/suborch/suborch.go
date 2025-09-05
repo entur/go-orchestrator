@@ -12,21 +12,21 @@ import (
 // Sub-Orchestrator
 // -----------------------
 
-type MyMinimalSubhOrch struct {
+type MyMinimalSubOrch struct {
 	projectID string
 	handlers  []orchestrator.ManifestHandler
 }
 
-func (so *MyMinimalSubhOrch) ProjectID() string {
+func (so *MyMinimalSubOrch) ProjectID() string {
 	return so.projectID
 }
 
-func (so *MyMinimalSubhOrch) Handlers() []orchestrator.ManifestHandler {
+func (so *MyMinimalSubOrch) Handlers() []orchestrator.ManifestHandler {
 	return so.handlers
 }
 
-func NewMyMinimalSubOrch(projectID string, handlers ...orchestrator.ManifestHandler) *MyMinimalSubhOrch {
-	return &MyMinimalSubhOrch{
+func NewMyMinimalSubOrch(projectID string, handlers ...orchestrator.ManifestHandler) *MyMinimalSubOrch {
+	return &MyMinimalSubOrch{
 		projectID: projectID,
 		handlers:  handlers,
 	}
