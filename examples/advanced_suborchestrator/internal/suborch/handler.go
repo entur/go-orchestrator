@@ -2,10 +2,9 @@ package suborch
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"net"
-	"net/http"
 	"time"
 
 	"github.com/entur/go-orchestrator"
@@ -16,7 +15,7 @@ const defaultTimeout = 10 * time.Second
 const defaultDialerTimeout = 5 * time.Second
 
 // -----------------------
-// Sub-Orchestrator Manifest Handler (Car)
+// Sub-Orchestrator Manifest Handler (Airplane)
 // -----------------------
 
 // Airplane Manifest ---V
@@ -29,13 +28,16 @@ type AirplaneManifest struct {
 type AirplaneManifestMetadata = orchestrator.ManifestMetadata // Default metadata definition, but you can use your own
 
 type AirplaneManifestSpec struct {
+	Model string `json:"model" jsonschema:"required"`
+	Wingspan float64 `json:"wingspanMeters" jsonschema:"required,minimum=1,maximum=500"`
+	Passengers int `json:"numberOfPassengers" jsonschema:"required,minimum=0,maximum=500"`
 }
 
 var AirplanManifestSchema = jsonschema.FromStruct[AirplaneManifest]()
 
 // Airplane Manifest Handler ---V
 type AirplaneManifestHandler struct{
-	client *http.Client
+	db *sql.DB
 }
 
 func (h *AirplaneManifestHandler) APIVersion() orchestrator.APIVersion {
@@ -46,11 +48,11 @@ func (h *AirplaneManifestHandler) Kind() orchestrator.Kind {
 	return "Airplane" // Which Manifest Kind this handler operates on
 }
 
-
 func (so *AirplaneManifestHandler) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest AirplaneManifest
 	var err error 
 
+	// Handle validation of manifest
 	result := AirplanManifestSchema.ValidateJSON(req.Manifest.New)
 	if !result.IsValid() {
 		for path, msg := range result.GetDetailedErrors() {
@@ -60,11 +62,12 @@ func (so *AirplaneManifestHandler) MiddlewareBefore(ctx context.Context, req orc
 		err = AirplanManifestSchema.Unmarshal(&manifest, req.Manifest.New)
 	}
 
+	// If manifest is invalid, report it as a failure to the user.
+	// Else, save the parsed manifest for processing in later handlers
 	if err != nil {
 		r.Fail(fmt.Sprintf("Manifest is invalid:\n%s", err.Error()))
 	} else {
-		// Store parsed manifest on ctx
-		orchestrator.Ctx(ctx).Set("manifest", manifest)
+		orchestrator.Ctx(ctx).Set("manifest", manifest) // Store parsed manifest on ctx
 	}
 
 	return nil
@@ -110,20 +113,12 @@ func (h *AirplaneManifestHandler) Destroy(ctx context.Context, req orchestrator.
 	return fmt.Errorf("destroy not implemented")
 }
 
-func NewAirplaneManifestHandler() *AirplaneManifestHandler {
+func NewAirplaneManifestHandler(db *sql.DB) *AirplaneManifestHandler {
 	return &AirplaneManifestHandler{
-		client: &http.Client{
-			Timeout: defaultTimeout,
-			Transport: &http.Transport{
-				Dial: (&net.Dialer{
-					Timeout: defaultDialerTimeout,
-				}).Dial,
-			},
-		},
+		db: db,
 	}
 }
 
-
 // -----------------------
-// Sub-Orchestrator Manifest Handler (Airplane)
+// Sub-Orchestrator Manifest Handler (Car)
 // -----------------------

@@ -1,6 +1,7 @@
 package entrypoint
 
 import (
+	"database/sql"
 	"os"
 
 	"advanced_suborchestrator/internal/suborch"
@@ -22,9 +23,16 @@ func init() {
 	// Setup Logging!
 	logger := logging.New()
 
+	// Setup DB!
+	db, err := sql.Open("", "")
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to setup db")
+	}
+
 	// Setup Sub-Orchestrator!
-	mh := suborch.NewAirplaneManifestHandler()
-	so := suborch.NewVehiclesSubOrch(projectID, mh)
+	//cmh := suborch.NewCarManifestHandler(db)
+	amh := suborch.NewAirplaneManifestHandler(db)
+	so := suborch.NewVehiclesSubOrch(projectID, amh)
 
 	// Start Cloud Function!
 	h := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomLogger(logger))

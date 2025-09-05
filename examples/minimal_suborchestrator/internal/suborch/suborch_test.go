@@ -48,7 +48,6 @@ func TestIntegration(t *testing.T) {
 		result := orchestrator.Process(context.Background(), so, mockRequest)
 
 		errs := result.Errors()
-
 		if len(errs) > 0 {
 			err := errors.Join(errs...)
 			t.Logf("result had some errors:\n%s", err.Error())
