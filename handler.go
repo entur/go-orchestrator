@@ -97,7 +97,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 
 		err := UnmarshalCloudEvent(e, &req)
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error when unmarshalling CloudEvent")
+			logger.Error().Err(err).Msg("Encountered an error when unmarshalling CloudEvent to Request")
 			return err
 		}
 
@@ -142,7 +142,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 		}
 
 		if err != nil {
-			logger.Error().Err(err).Msg("Encountered an internal error during processing")
+			logger.Error().Err(err).Msg("Encountered an error during the handling of the Request")
 		}
 		return err
 	}

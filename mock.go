@@ -36,7 +36,7 @@ func WithSender(sender Sender) MockRequestOption {
 
 func WithIAMEndpoint(url string) MockRequestOption {
 	return func(req *Request) {
-		req.Resources.IAM.URL = url
+		req.Resources.IAMLookup.URL = url
 	}
 }
 
@@ -48,7 +48,7 @@ func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 
 	req := &Request{
 		APIVersion: "orchestrator.entur.io/request/v1",
-		Metadata: OuterMetadata{
+		Metadata: RequestMetadata{
 			RequestID: DefaultMockRequestID,
 		},
 		Origin: Origin{

@@ -40,7 +40,7 @@ func enforceJSON(next http.Handler) http.Handler {
 
 const defaultReadHeaderTimeout = 10 * time.Second
 
-type MockIAMServer struct {
+type MockIAMLookupServer struct {
 	server           *http.Server
 	port             int
 	url              string
@@ -49,7 +49,7 @@ type MockIAMServer struct {
 	userGroups       map[string][]string
 }
 
-func (s *MockIAMServer) hGCPProjectIDs(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMLookupServer) hGCPProjectIDs(w http.ResponseWriter, req *http.Request) {
 	var reqBody GCPAppProjectsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -70,7 +70,7 @@ func (s *MockIAMServer) hGCPProjectIDs(w http.ResponseWriter, req *http.Request)
 	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMLookupServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *http.Request) {
 	var reqBody GCPUserAccessRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -101,7 +101,7 @@ func (s *MockIAMServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, req *ht
 	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Request) {
+func (s *MockIAMLookupServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Request) {
 	var reqBody EntraIDUserGroupsRequest
 	err := json.NewDecoder(req.Body).Decode(&reqBody)
 	if err != nil {
@@ -116,12 +116,12 @@ func (s *MockIAMServer) hEntraIDUserGroups(w http.ResponseWriter, req *http.Requ
 	_ = json.NewEncoder(w).Encode(resBody)
 }
 
-func (s *MockIAMServer) URL() string {
+func (s *MockIAMLookupServer) URL() string {
 	return s.url
 }
 
 // Non-blocking
-func (s *MockIAMServer) Start() error {
+func (s *MockIAMLookupServer) Start() error {
 	if s.url != "" {
 		return fmt.Errorf("server is already running")
 	}
@@ -146,28 +146,28 @@ func (s *MockIAMServer) Start() error {
 	return nil
 }
 
-func (s *MockIAMServer) Stop() error {
+func (s *MockIAMLookupServer) Stop() error {
 	err := s.server.Close()
 	s.url = ""
 	return err
 }
 
-type MockIAMServerOption func(*MockIAMServer)
+type MockIAMServerOption func(*MockIAMLookupServer)
 
 func WithPort(port int) MockIAMServerOption {
-	return func(s *MockIAMServer) {
+	return func(s *MockIAMLookupServer) {
 		s.port = port
 	}
 }
 
 func WithAppIDProjects(appID string, projectIDs []string) MockIAMServerOption {
-	return func(s *MockIAMServer) {
+	return func(s *MockIAMLookupServer) {
 		s.appIDProjects[appID] = projectIDs
 	}
 }
 
 func WithUserProjectRoles(email string, projectID string, roles []string) MockIAMServerOption {
-	return func(s *MockIAMServer) {
+	return func(s *MockIAMLookupServer) {
 		project, ok := s.userProjectRoles[projectID]
 		if !ok {
 			project = map[string][]string{}
@@ -179,15 +179,15 @@ func WithUserProjectRoles(email string, projectID string, roles []string) MockIA
 }
 
 func WithUserGroups(email string, groups []string) MockIAMServerOption {
-	return func(s *MockIAMServer) {
+	return func(s *MockIAMLookupServer) {
 		s.userGroups[email] = groups
 	}
 }
 
-// NewMockIAMServer returns a new mock server which mimics the functionality of the IAM Lookup resource.
+// NewMockIAMLookupServer returns a new mock server which mimics the functionality of the IAM Lookup resource.
 // It can be used along with NewIAMClient for local client -> server testing.
-func NewMockIAMServer(opts ...MockIAMServerOption) (*MockIAMServer, error) {
-	s := &MockIAMServer{
+func NewMockIAMLookupServer(opts ...MockIAMServerOption) (*MockIAMLookupServer, error) {
+	s := &MockIAMLookupServer{
 		appIDProjects:    map[string][]string{},
 		userProjectRoles: map[string]map[string][]string{},
 		userGroups:       map[string][]string{},

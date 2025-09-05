@@ -105,7 +105,7 @@ func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Requ
 
 	if req.Sender.Type == orchestrator.SenderTypeUser {
 		logger.Info().Msg("#####")
-		client, err := oresources.NewIAMClient(ctx, req.Resources.IAM.URL)
+		client, err := oresources.NewIAMLookupClient(ctx, req.Resources.IAMLookup.URL)
 		if err != nil {
 			return err
 		}
@@ -156,16 +156,6 @@ func NewExampleSO(projectID string) *ExampleSO {
 // -----------------------
 
 func Example() {
-	// Usually you would setup the sub-orchestrator inside an init function like so:
-	//
-	// 	func init() {
-	// 			so := NewSO()
-	//			handler := orchestrator.NewCloudEventHandler(so)
-	//	    	functions.CloudEvent("OrchestratorEvent", handler)
-	//	}
-	//
-	// However, here we are configuring and executing it as part of an example test.
-
 	logger := logging.New(
 		logging.WithWriter(
 			logging.NewConsoleWriter(
@@ -175,7 +165,7 @@ func Example() {
 		),
 	)
 
-	iamServer, _ := oresources.NewMockIAMServer(
+	iamServer, _ := oresources.NewMockIAMLookupServer(
 		oresources.WithPort(8001),
 		oresources.WithUserProjectRoles(
 			orchestrator.DefaultMockUserEmail,
