@@ -35,9 +35,6 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (before): %w", err)
 		}
-		if res.locked {
-			return nil
-		}
 	}
 
 	before, ok = h.(MiddlewareBefore)
@@ -47,27 +44,28 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("manifesthandler middleware (before): %w", err)
 		}
-		if res.locked {
-			return nil
+	}
+
+	if !res.locked {
+		logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s)", version, kind, action)
+		switch req.Action {
+		case ActionApply:
+			err = h.Apply(ctx, *req, res)
+		case ActionPlan:
+			err = h.Plan(ctx, *req, res)
+		case ActionPlanDestroy:
+			err = h.PlanDestroy(ctx, *req, res)
+		case ActionDestroy:
+			err = h.Destroy(ctx, *req, res)
+		default:
+			err = fmt.Errorf("invalid action")
 		}
-	}
 
-	logger.Debug().Msgf("Executing ManifestHandler (%s, %s, %s)", version, kind, action)
-	switch req.Action {
-	case ActionApply:
-		err = h.Apply(ctx, *req, res)
-	case ActionPlan:
-		err = h.Plan(ctx, *req, res)
-	case ActionPlanDestroy:
-		err = h.PlanDestroy(ctx, *req, res)
-	case ActionDestroy:
-		err = h.Destroy(ctx, *req, res)
-	default:
-		err = fmt.Errorf("invalid action")
-	}
-
-	if err != nil {
-		return fmt.Errorf("manifesthandler (%s, %s, %s): %w", version, kind, action, err)
+		if err != nil {
+			return fmt.Errorf("manifesthandler (%s, %s, %s): %w", version, kind, action, err)
+		}
+	} else {
+		logger.Debug().Msgf("Skipping Executing ManifestHandler (%s, %s, %s) since result has already been set in middleware", version, kind, action)
 	}
 
 	after, ok := h.(MiddlewareAfter)
@@ -77,9 +75,6 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		if err != nil {
 			return fmt.Errorf("manifesthandler middleware (after): %w", err)
 		}
-		if res.locked {
-			return nil
-		}
 	}
 
 	after, ok = so.(MiddlewareAfter)
@@ -88,9 +83,6 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 		err = after.MiddlewareAfter(ctx, *req, res)
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (after): %w", err)
-		}
-		if res.locked {
-			return nil
 		}
 	}
 
