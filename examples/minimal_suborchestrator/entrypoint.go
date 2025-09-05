@@ -1,4 +1,4 @@
-package suborch
+package entrypoint
 
 import (
 	"os"
