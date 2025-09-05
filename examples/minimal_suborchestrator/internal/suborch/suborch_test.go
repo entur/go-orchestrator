@@ -11,6 +11,7 @@ import (
 // -----------------------
 // Sub-Orchestrator Integration Test
 // -----------------------
+
 func TestIntegration(t *testing.T) {
 	mh := NewMyMinimalManifestHandler()
 	so := NewMyMinimalSubOrch("mock", mh)

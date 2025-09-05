@@ -3,9 +3,10 @@ package suborch
 import (
 	"os"
 
+	"minimal_suborchestrator/internal/suborch"
+
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/examples/minimal_suborchestrator/internal/suborch"
 )
 
 // -----------------------
