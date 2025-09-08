@@ -6,7 +6,7 @@ It is written in Golang, and contains predefined type declarations, jsonschema v
 ## Quickstart
 
 ### Install 
-```
+```sh
 go get github.com/entur/go-orchestrator
 go mod tidy
 ```
@@ -172,6 +172,15 @@ type MiddlewareAfter interface {
 }
 ```
 
+The order in which middlewares will be run is as follows:
+1. Sub-Orchestrator `MiddlewareBefore` (if defined)
+2. ManifestHandler `MiddlewareBefore` (if defined)
+3. ManifestHandler `Plan`/`PlanDestroy`/`Apply`/`Destroy`
+4. ManifestHandler `MiddlewareAfter` (if defined)
+5. Sub-Orchestrator `MiddlewareAfter` (if defined)
+
+Note: Handlers will short-circuit if an internal error occurs at any point in the flow.
+Note2: The Action Handler (`Plan`/`PlanDestroy`/`Apply`/`Destroy`) will be skipped if a user failure occurs in one of the previous handlers. The remaining Middleware handlers will still be run.
 
 ### Handling Internal Errors
 During the processing of a Platform Orchestrator Request in a Sub-Orchestrator, unexpected internal errors might occur that should prevent any further processing from taking place. That being later in the function itself, or in a later middleware handler.
@@ -235,7 +244,7 @@ type MyManifest struct {
 type MyManifestManifestMetadata = orchestrator.ManifestMetadata // Default metadata definition, but you can use your own
 
 type MyManifestManifestSpec struct {
-	ClubName   string   `json:"clubName"`
+	Environment   string   `json:"clubName"`
 }
 
 type AdvancedChange struct {
@@ -256,7 +265,7 @@ func (h *Handler) Apply(ctx context.Context, req orchestrator.Request, r *orches
 
 	// Some terraform logic
 
-	plan := Terraform.Plan()
+	plan := Terraform.Plan(manifest.Spec.Environment)
 
 	// End of terraform logic
 
@@ -273,13 +282,9 @@ Note: If a result containing no changes (I.e.`r.Create()`, `r.Update()` and `r.D
 
 ## Run tests
 
-This is a great way to get hacking! Simply modify the examples and play around.
-Change the expected output followed by `// Output:` to verify your expectations.
-
+This project makes use of Example tests. To run them, simply use use the following command
 ```sh
 go test ./...
-go test orchestrator_minimal_example_test.go
-go test orchestrator_example_test.go
 ```
 
 ## Examples
