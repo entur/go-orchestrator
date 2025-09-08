@@ -269,6 +269,7 @@ func (h *Handler) Apply(ctx context.Context, req orchestrator.Request, r *orches
 
 	// End of terraform logic
 
+	r.Create("Grafana dashboards")
 	r.Create(AdvancedChange{
 		Plan: plan,
 	})
