@@ -14,21 +14,21 @@ import (
 // -----------------------
 
 type Request struct {
-	Action        Action        `json:"action"`
-	APIVersion    APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
-	Manifest      Manifests     `json:"manifest"`
+	Action        Action          `json:"action"`
+	APIVersion    APIVersion      `json:"apiVersion"` // 'orchestrator.entur.io/request/v1'
+	Manifest      Manifests       `json:"manifest"`
 	Metadata      RequestMetadata `json:"metadata"`
-	Resources     Resources     `json:"resources"`
-	Origin        Origin        `json:"origin"`
-	Sender        Sender        `json:"sender"`
-	ResponseTopic string        `json:"responseTopic"`
+	Resources     Resources       `json:"resources"`
+	Origin        Origin          `json:"origin"`
+	Sender        Sender          `json:"sender"`
+	ResponseTopic string          `json:"responseTopic"`
 }
 
 type Response struct {
-	APIVersion APIVersion    `json:"apiVersion"` // 'orchestrator.entur.io/response/v1'
+	APIVersion APIVersion      `json:"apiVersion"` // 'orchestrator.entur.io/response/v1'
 	Metadata   RequestMetadata `json:"metadata"`
-	ResultCode ResultCode    `json:"result"` // 'success'
-	Output     string        `json:"output"`
+	ResultCode ResultCode      `json:"result"` // 'success'
+	Output     string          `json:"output"`
 }
 
 type Action string
@@ -47,17 +47,19 @@ const (
 	APIVersionOrchestratorRequestV1  APIVersion = "orchestrator.entur.io/response/v1" // Platform Orchestrator Response
 )
 
+type Manifest = json.RawMessage
+
 type ManifestHeader struct {
 	APIVersion APIVersion `json:"apiVersion" jsonschema:"required,minLength=1,maxLength=2083,pattern=^orchestrator\\.entur\\.io\\/.*\\/[vV].*$"` // 'orchestrator.entur.io/mysuborchestrator/v1'
-	Kind       Kind       `json:"kind" jsonschema:"required,minLength=2,maxLength=63"`                                                          // 'mymanifestkind'
+	Kind       Kind       `json:"kind" jsonschema:"required,minLength=2,maxLength=63"`                                                           // 'mymanifestkind'
 }
 
 type ManifestMetadata struct {
-	ID string `json:"id" jsonschema:"required,minLength=1,maxLength=63"`
-	Name *string `json:"name"`
+	ID          string  `json:"id" jsonschema:"required,minLength=1,maxLength=63"`
+	Name        *string `json:"name"`
 	DisplayName *string `json:"displayName"`
 	Description *string `json:"description"`
-	Owner *string `json:"owner"`
+	Owner       *string `json:"owner"`
 }
 
 type Kind string // Sub-Orchestrator Manifest Kind
@@ -66,8 +68,6 @@ type Manifests struct {
 	Old *Manifest `json:"old"`
 	New Manifest  `json:"new"`
 }
-
-type Manifest = json.RawMessage
 
 type RequestMetadata struct {
 	RequestID string `json:"requestId"` // Request ID specified by Platform Orchestrator used to track the user request
@@ -178,7 +178,7 @@ func (change simpleChange) String() string {
 	return change.text
 }
 
-func castAnyToChanges(values []any) ([]Change, bool) {
+func convertAnyToChanges(values []any) ([]Change, bool) {
 	changes := make([]Change, 0, len(values))
 	failed := false
 
@@ -205,7 +205,7 @@ loop:
 				failed = true
 				break loop
 			}
-			
+
 			kindV := reflectV.Kind()
 			if kindV != reflect.Slice && kindV != reflect.Array {
 				failed = true
@@ -213,20 +213,20 @@ loop:
 			}
 
 			for i := 0; i < reflectV.Len(); i += 1 {
-				elem :=	reflectV.Index(i).Interface()
+				elem := reflectV.Index(i).Interface()
 				if elem != nil {
 					tmp, ok := elem.(Change)
 					if !ok {
 						failed = true
 						break loop
 					}
-						
+
 					changes = append(changes, tmp)
 				}
 			}
 		}
 	}
-	
+
 	return changes, !failed
 }
 
@@ -319,7 +319,7 @@ func (r *Result) Create(changes ...any) {
 		return
 	}
 
-	values, ok := castAnyToChanges(changes)
+	values, ok := convertAnyToChanges(changes)
 	if !ok {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that does not match Change or String constraints"))
 	} else {
@@ -344,7 +344,7 @@ func (r *Result) Update(changes ...any) {
 		return
 	}
 
-	values, ok := castAnyToChanges(changes)
+	values, ok := convertAnyToChanges(changes)
 	if !ok {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that does not match Change or String constraints"))
 	} else {
@@ -369,7 +369,7 @@ func (r *Result) Delete(changes ...any) {
 		return
 	}
 
-	values, ok := castAnyToChanges(changes)
+	values, ok := convertAnyToChanges(changes)
 	if !ok {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that does not match Change or String constraints"))
 	} else {
@@ -401,7 +401,7 @@ func (r *Result) Code() ResultCode {
 // Get the final result string output.
 func (r *Result) Output() string {
 	if len(r.errs) > 0 || !r.locked {
-		return "Internal error"
+		return "An internal error occurred. Please refer to the documentation for support"
 	}
 	if !r.success {
 		return r.summary

@@ -7,6 +7,8 @@ require (
 	github.com/entur/go-orchestrator v1.6.0
 )
 
+replace github.com/entur/go-orchestrator => ./../..
+
 require (
 	cloud.google.com/go v0.121.6 // indirect
 	cloud.google.com/go/auth v0.16.5 // indirect
