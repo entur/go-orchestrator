@@ -178,56 +178,71 @@ func (change simpleChange) String() string {
 	return change.text
 }
 
-func convertAnyToChanges(values []any) ([]Change, bool) {
-	changes := make([]Change, 0, len(values))
-	failed := false
+func appendChangeIfValueIsValidComplex(dst *[]Change, v any) bool {
+	reflectV := reflect.ValueOf(v)
+	if !reflectV.IsValid() {
+		return false
+	}
 
-loop:
-	for _, value := range values {
-		switch v := value.(type) {
-		case Change:
-			changes = append(changes, v)
-		case []Change:
-			changes = append(changes, v...)
-		case string:
-			changes = append(changes, simpleChange{v})
-		case []string:
-			for _, elem := range v {
-				changes = append(changes, simpleChange{elem})
-			}
-		default:
-			// If the value type does not match any of the above assertions,
-			// it might still be a slice/array of a custom type that matches the Change interface.
-			// Therefore, we have to check if the value is of kind array/slice
-			// and individually perform type assertions for each element.
-			reflectV := reflect.ValueOf(value)
-			if !reflectV.IsValid() {
-				failed = true
-				break loop
-			}
+	kindV := reflectV.Kind()
+	if kindV != reflect.Slice && kindV != reflect.Array {
+		return false
+	}
 
-			kindV := reflectV.Kind()
-			if kindV != reflect.Slice && kindV != reflect.Array {
-				failed = true
-				break loop
-			}
+	for i := 0; i < reflectV.Len(); i++ {
+		elem := reflectV.Index(i).Interface()
+		if elem == nil {
+			continue
+		}
 
-			for i := 0; i < reflectV.Len(); i += 1 {
-				elem := reflectV.Index(i).Interface()
-				if elem != nil {
-					tmp, ok := elem.(Change)
-					if !ok {
-						failed = true
-						break loop
-					}
+		change, ok := elem.(Change)
+		if !ok {
+			return false
+		}
 
-					changes = append(changes, tmp)
-				}
-			}
+		*dst = append(*dst, change)
+	}
+
+	return true
+}
+
+func appendChangeIfValueIsValid(dst *[]Change, v any) bool {
+	switch value := v.(type) {
+	case Change:
+		*dst = append(*dst, value)
+	case []Change:
+		*dst = append(*dst, value...)
+	case string:
+		*dst = append(*dst, simpleChange{value})
+	case []string:
+		for _, elem := range value {
+			*dst = append(*dst, simpleChange{elem})
+		}
+	default:
+		// If the type does not match any of the above assertions,
+		// it might still be a slice/array of a custom type that matches the Change interface.
+		// Therefore, we have to check if the value is of kind array/slice
+		// and individually perform type assertions for each element.
+		if !appendChangeIfValueIsValidComplex(dst, value) {
+			return false
 		}
 	}
 
-	return changes, !failed
+	return true
+}
+
+// changesFromUnknownValues loops over all values with unknown types, and attempts to cast them to
+// the Changes. If the function fails, its secondary return value will be set to false.
+func changesFromUnknownValues(values []any) ([]Change, bool) {
+	changes := make([]Change, 0, len(values))
+
+	for _, value := range values {
+		if !appendChangeIfValueIsValid(&changes, value) {
+			return nil, false
+		}
+	}
+
+	return changes, true
 }
 
 // -----------------------
@@ -313,13 +328,14 @@ func (r *Result) Fail(summary string) {
 // Valid change types are:
 // * string
 // * Stringer/Change interface
+// * Slices/Arrays containing Stringer/Change interfaces
 func (r *Result) Create(changes ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change to a locked result"))
 		return
 	}
 
-	values, ok := convertAnyToChanges(changes)
+	values, ok := changesFromUnknownValues(changes)
 	if !ok {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'create' change that does not match Change or String constraints"))
 	} else {
@@ -338,13 +354,14 @@ func (r *Result) Creations() []Change {
 // Valid change types are:
 // * string
 // * Stringer/Change interface
+// * Slices/Arrays containing Stringer/Change interfaces
 func (r *Result) Update(changes ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change to a locked result"))
 		return
 	}
 
-	values, ok := convertAnyToChanges(changes)
+	values, ok := changesFromUnknownValues(changes)
 	if !ok {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'update' change that does not match Change or String constraints"))
 	} else {
@@ -363,13 +380,14 @@ func (r *Result) Updates() []Change {
 // Valid change types are:
 // * string
 // * Stringer/Change interface
+// * Slices/Arrays containing Stringer/Change interfaces
 func (r *Result) Delete(changes ...any) {
 	if r.locked {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change to a locked result"))
 		return
 	}
 
-	values, ok := convertAnyToChanges(changes)
+	values, ok := changesFromUnknownValues(changes)
 	if !ok {
 		r.errs = append(r.errs, logging.NewStackTraceError("attempted to add a new 'delete' change that does not match Change or String constraints"))
 	} else {

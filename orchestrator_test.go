@@ -1,231 +1,115 @@
-package orchestrator_test
+package orchestrator
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-
-	"github.com/entur/go-logging"
-	"github.com/entur/go-orchestrator"
-	"github.com/entur/go-orchestrator/oresources"
+	"testing"
 )
 
-type ExampleSpecV1 struct {
-	Name string `json:"name"`
-}
+func TestChangesFromUnknownValues(t *testing.T) {
+	type Expected = []string
 
-type ExampleMetadataV1 struct {
-	ID string `json:"id"`
-}
-
-type ExampleManifestV1 struct {
-	orchestrator.ManifestHeader
-	Metadata ExampleMetadataV1 `json:"metadata"`
-	Spec     ExampleSpecV1     `json:"spec"`
-}
-
-type ExampleManifestV1Handler struct {
-	/* you can have some internal state here */
-}
-
-func (h *ExampleManifestV1Handler) APIVersion() orchestrator.APIVersion {
-	return "orchestrator.entur.io/example/v1"
-}
-
-func (h *ExampleManifestV1Handler) Kind() orchestrator.Kind {
-	return "Example"
-}
-
-func (h *ExampleManifestV1Handler) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	logger := logging.Ctx(ctx)
-
-	logger.Info().Msg("After Orchestrator middleware executes, but before manifest handler executes")
-
-	return nil
-}
-
-func (h *ExampleManifestV1Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	var manifest ExampleManifestV1
-	err := json.Unmarshal(req.Manifest.New, &manifest)
-	if err != nil {
-		return err
+	type Test struct {
+		title    string
+		values   []any
+		expected Expected
 	}
 
-	r.Create("A thing")
-	r.Update("A thing")
-	r.Delete("A thing")
-	r.Succeed("Plan all the things")
-	return nil
-}
-
-func (h *ExampleManifestV1Handler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	return fmt.Errorf("plandestroy not implemented")
-}
-
-func (h *ExampleManifestV1Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	var manifest ExampleManifestV1
-	err := json.Unmarshal(req.Manifest.New, &manifest)
-	if err != nil {
-		return err
-	}
-
-	r.Create("A thing")
-	r.Update("A thing")
-	r.Delete("A thing")
-	r.Succeed("Plan all the things")
-	return nil
-}
-
-func (h *ExampleManifestV1Handler) Destroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	return fmt.Errorf("destroy not implemented")
-}
-
-type ExampleSO struct {
-	/* you can have some internal state here */
-	projectID string
-	handlers  []orchestrator.ManifestHandler
-}
-
-func (so *ExampleSO) ProjectID() string {
-	return so.projectID
-}
-
-func (so *ExampleSO) Handlers() []orchestrator.ManifestHandler {
-	return so.handlers
-}
-
-func (so *ExampleSO) MiddlewareBefore(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
-	logger := logging.Ctx(ctx)
-
-	logger.Info().Msg("Before it begins")
-	if req.Origin.Repository.Visibility != orchestrator.RepositoryVisbilityPublic {
-		r.Fail("This sub-orchestrator only accepts manifests in public repositories")
-		return nil
-	}
-
-	if req.Sender.Type == orchestrator.SenderTypeUser {
-		logger.Info().Msg("#####")
-		client, err := oresources.NewIAMLookupClient(ctx, req.Resources.IAMLookup.URL)
-		if err != nil {
-			return err
-		}
-
-		access, err := client.GCPUserHasRoleInProjects(ctx, req.Sender.Email, "your_so_role", "ent-someproject-dev")
-		if err != nil {
-			return err
-		}
-
-		if !access {
-			r.Fail("You don't have access to ent-someproject-dev")
-			return nil
-		}
-	}
-
-	// The cache is shared between middlewares and handlers!
-	cache := orchestrator.Ctx(ctx)
-	cache.Set("cache_key", "something something!")
-
-	return nil
-}
-
-func (so ExampleSO) MiddlewareAfter(ctx context.Context, _ orchestrator.Request, res *orchestrator.Result) error {
-	logger := logging.Ctx(ctx)
-	logger.Info().Msg("Auditing this thing")
-
-	cache := orchestrator.Ctx(ctx)
-	value := cache.Get("cache_key")
-	if str, ok := value.(string); ok {
-		logger.Info().Msgf("Got value from cache: %s", str)
-	}
-
-	logger.Info().Msg("After it's done")
-	return nil
-}
-
-func NewExampleSO(projectID string) *ExampleSO {
-	return &ExampleSO{
-		projectID: projectID,
-		handlers: []orchestrator.ManifestHandler{
-			&ExampleManifestV1Handler{},
+	var tests = []Test{
+		{
+			title: "invalid simple casts",
+			values: []any{
+				"mockstr",
+				"mockstr2",
+				int(0),
+			},
+			expected: nil,
+		},
+		{
+			title: "invalid advanced casts",
+			values: []any{
+				"mockstr",
+				"mockstr2",
+				[]any{
+					int(0),
+					simpleChange{"mockstr3"},
+				},
+			},
+			expected: nil,
+		},
+		{
+			title: "valid simple casts",
+			values: []any{
+				"mockstr",
+				"mockstr2",
+				[]string{
+					"mockstr3",
+					"mockstr4",
+				},
+			},
+			expected: []string{
+				"mockstr",
+				"mockstr2",
+				"mockstr3",
+				"mockstr4",
+			},
+		},
+		{
+			title: "valid advanced casts",
+			values: []any{
+				"mockstr",
+				"mockstr2",
+				[]string{
+					"mockstr3",
+					"mockstr4",
+				},
+				simpleChange{"mockstr5"},
+				simpleChange{"mockstr6"},
+				[]Change{
+					simpleChange{"mockstr7"},
+					simpleChange{"mockstr8"},
+				},
+				[]simpleChange{
+					// There's a bug here with gofmt, and the only way to fix it is to disable the linting for this specific line
+					// nolint:gofmt
+					simpleChange{"mockstr9"},
+					simpleChange{"mockstr10"},
+				},
+				[]any{
+					simpleChange{"mockstr11"},
+				},
+			},
+			expected: []string{
+				"mockstr",
+				"mockstr2",
+				"mockstr3",
+				"mockstr4",
+				"mockstr5",
+				"mockstr6",
+				"mockstr7",
+				"mockstr8",
+				"mockstr9",
+				"mockstr10",
+				"mockstr11",
+			},
 		},
 	}
-}
 
-// -----------------------
-// Complex Sub-Orchestrator Example
-// -----------------------
+	for _, test := range tests {
+		tmp := test
+		t.Run(tmp.title, func(t *testing.T) {
+			t.Parallel()
 
-func Example() {
-	logger := logging.New(
-		logging.WithNoCaller(),
-		logging.WithLevel(logging.DebugLevel),
-		logging.WithWriter(
-			logging.NewConsoleWriter(
-				logging.WithNoColor(),
-				logging.WithNoTimestamp(),
-			),
-		),
-	)
+			changes, _ := changesFromUnknownValues(tmp.values)
+			if len(tmp.expected) != len(changes) {
+				t.Fatalf("total number of changes does not match expected value\ngot: %d\nwant: %d", len(changes), len(tmp.expected))
+			}
 
-	iamServer, _ := oresources.NewMockIAMLookupServer(
-		oresources.WithPort(8001),
-		oresources.WithUserProjectRoles(
-			orchestrator.DefaultMockUserEmail,
-			"ent-someproject-dev",
-			[]string{"your_so_role"},
-		),
-	)
-
-	err := iamServer.Start()
-	if err != nil {
-		logger.Panic().Err(err).Send()
+			for i, change := range changes {
+				expectedStr := tmp.expected[i]
+				changeStr := change.String()
+				if expectedStr != changeStr {
+					t.Fatalf("change string at index %d does not match expected value\ngot: %s\nwant: %s", i, changeStr, expectedStr)
+				}
+			}
+		})
 	}
-	defer func() {
-		err := iamServer.Stop()
-		if err != nil {
-			logger.Panic().Err(err).Send()
-		}
-	}()
-
-	so := NewExampleSO("mysoproject")
-	handler := orchestrator.NewCloudEventHandler(so,
-		orchestrator.WithCustomLogger(logger),
-		orchestrator.WithCustomPubSubClient(nil),
-	)
-
-	manifest := ExampleManifestV1{
-		ManifestHeader: orchestrator.ManifestHeader{
-			APIVersion: so.handlers[0].APIVersion(),
-			Kind:       so.handlers[0].Kind(),
-		},
-		Spec: ExampleSpecV1{
-			Name: "Test Name",
-		},
-		Metadata: ExampleMetadataV1{
-			ID: "manifestid",
-		},
-	}
-	e, _ := orchestrator.NewMockCloudEvent(manifest, orchestrator.WithIAMEndpoint(iamServer.URL()))
-
-	err = handler(context.Background(), *e)
-	if err != nil {
-		logger.Error().Err(err).Msg("Encountered error")
-	}
-
-	// Output:
-	// DBG Created a new CloudEventHandler
-	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"contextId":"mockid","requestId":"mockid"},"origin":{"fileChanges":{"bloblUrl":"","contentsUrl":"","rawUrl":""},"fileName":"","pullRequest":{"body":"","htmlUrl":"","id":0,"labels":null,"number":0,"ref":"","state":"open","title":""},"repository":{"defaultBranch":"main","fullName":"entur/mockrepo","htmlUrl":"","id":0,"name":"mockrepo","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"githubLogin":"mockuser","githubRepositoryPermission":"admin","type":"user"}} gorch_request_id=mockid
-	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Executing Orchestrator MiddlewareBefore (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Executing ManifestHandler MiddlewareBefore (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Executing Orchestrator MiddlewareAfter (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF Auditing this thing gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF Got value from cache: something something! gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// INF After it's done gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// WRN Pubsub client is set to null, no responses will be sent gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid gorch_result_creations=[{}] gorch_result_deletions=[{}] gorch_result_summary="Plan all the things" gorch_result_updates=[{}]
 }

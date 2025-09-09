@@ -1,31 +1,29 @@
 # Advanced Sub-Orchestrator
 
-This example shows how to create a minimal sub-orchestrator, taking advantage of the basic go-orchestrator SDK features. It handles one manfiest kind and version, here's the spec:
+This example shows how to create an advanced sub-orchestrator, taking advantage of most of the Go-Orchestrator SDK features. It handles two different manfiest kinds and one version, here's the spec:
 
 ```yaml
-apiVersion: orchestrator.entur.io/example/v1
-kind: Example
+apiVersion: orchestrator.entur.io/vehicle/v1
+kind: Airplane
 metadata:
   id: someid
 spec:
-  name: Some name
+  model: "Boeing 747"
+  wingspanMeters: 45.6
+  numberOfPassengers: 30
 ```
 
-This example creates an advanced sub-orchestrator using most of the APIs in this SDK.
-
-- Versioned types
-- MiddlewareBefore (auth)
-- MiddlewareAfter (audit log)
-- Custom console log writer for testing
-- Mock IAM server for testing
-
-The code is written in a way to make it clear that a future v2 may come and serves as a best practice reference.
-
 ```yaml
-apiVersion: orchestrator.entur.io/example/v1
-kind: Example
+apiVersion: orchestrator.entur.io/vehicle/v1
+kind: Car
 metadata:
   id: someid
 spec:
-  name: Some name
+  model: "Ford Fiesta"
+  numberOfWheels: 4
+  numberOfPassengers: 3
 ```
+
+## Note
+
+This example is not yet complete, and is yet to be expanded upon in the future.

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
 )
 
@@ -67,7 +68,8 @@ func (h *MyMinimalManifestHandler) Plan(ctx context.Context, req orchestrator.Re
 
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
-		return err
+		r.Fail(fmt.Sprintf("manifest is invalid: %s", err.Error()))
+		return nil
 	}
 
 	if manifest.Spec.Here >= 10 {
@@ -87,7 +89,8 @@ func (h *MyMinimalManifestHandler) PlanDestroy(ctx context.Context, req orchestr
 
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
-		return err
+		r.Fail(fmt.Sprintf("manifest is invalid: %s", err.Error()))
+		return nil
 	}
 
 	r.Delete("Some message")
@@ -96,15 +99,19 @@ func (h *MyMinimalManifestHandler) PlanDestroy(ctx context.Context, req orchestr
 }
 
 func (h *MyMinimalManifestHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
+	logger := logging.Ctx(ctx)
+	logger.Trace().Msg("Running apply logic")
+	
 	var manifest MyMinimalManifest
 
 	err := json.Unmarshal(req.Manifest.New, &manifest)
 	if err != nil {
-		return err
+		r.Fail(fmt.Sprintf("manifest is invalid: %s", err.Error()))
+		return nil
 	}
 
 	if manifest.Spec.Here >= 10 {
-		r.Fail(".spec.here value must be less than 10!")
+		r.Fail("manifest is invalid: .spec.here value must be less than 10!")
 		return nil
 	}
 

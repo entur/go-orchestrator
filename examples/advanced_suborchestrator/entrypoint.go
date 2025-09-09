@@ -6,6 +6,8 @@ import (
 
 	"advanced_suborchestrator/internal/suborch"
 
+	_ "modernc.org/sqlite"
+
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/entur/go-logging"
 	"github.com/entur/go-orchestrator"
@@ -24,15 +26,15 @@ func init() {
 	logger := logging.New()
 
 	// Setup DB!
-	db, err := sql.Open("", "")
+	db, err := sql.Open("sqlite", "mock")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to setup db")
 	}
 
 	// Setup Sub-Orchestrator!
-	//cmh := suborch.NewCarManifestHandler(db)
 	amh := suborch.NewAirplaneManifestHandler(db)
-	so := suborch.NewVehiclesSubOrch(projectID, amh)
+	cmh := suborch.NewCarManifestHandler(db)
+	so := suborch.NewVehiclesSubOrch(projectID, amh, cmh)
 
 	// Start Cloud Function!
 	h := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomLogger(logger))
