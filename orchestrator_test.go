@@ -157,6 +157,8 @@ func NewExampleSO(projectID string) *ExampleSO {
 
 func Example() {
 	logger := logging.New(
+		logging.WithNoCaller(),
+		logging.WithLevel(logging.DebugLevel),
 		logging.WithWriter(
 			logging.NewConsoleWriter(
 				logging.WithNoColor(),
@@ -212,12 +214,12 @@ func Example() {
 
 	// Output:
 	// DBG Created a new CloudEventHandler
-	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"requestId":"mockid"},"origin":{"fileChanges":{"bloblUrl":"","contentsUrl":"","rawUrl":""},"fileName":"","pullRequest":{"body":"","htmlUrl":"","id":0,"labels":null,"number":0,"ref":"","state":"open","title":""},"repository":{"defaultBranch":"main","fullName":"entur/mockrepo","htmlUrl":"","id":0,"name":"mockrepo","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"githubLogin":"mockuser","githubRepositoryPermission":"admin","type":"user"}} gorch_request_id=mockid
+	// DBG Processing request gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request={"action":"plan","apiVersion":"orchestrator.entur.io/request/v1","manifest":{"new":{"apiVersion":"orchestrator.entur.io/example/v1","kind":"Example","metadata":{"id":"manifestid"},"spec":{"name":"Test Name"}},"old":null},"metadata":{"contextId":"mockid","requestId":"mockid"},"origin":{"fileChanges":{"bloblUrl":"","contentsUrl":"","rawUrl":""},"fileName":"","pullRequest":{"body":"","htmlUrl":"","id":0,"labels":null,"number":0,"ref":"","state":"open","title":""},"repository":{"defaultBranch":"main","fullName":"entur/mockrepo","htmlUrl":"","id":0,"name":"mockrepo","visibility":"public"}},"resources":{"iamLookup":{"url":"http://localhost:8001"}},"responseTopic":"mocktopic","sender":{"githubEmail":"mockuser@entur.io","githubId":0,"githubLogin":"mockuser","githubRepositoryPermission":"admin","type":"user"}} gorch_request_id=mockid
 	// DBG Found ManifestHandler (orchestrator.entur.io/example/v1, Example) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// DBG Executing Orchestrator MiddlewareBefore (mysoproject) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF Before it begins gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF ##### gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
-	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAM gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
+	// DBG Unable to discover idtoken credentials, defaulting to http.Client for IAMLookup gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// DBG Executing ManifestHandler MiddlewareBefore (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// INF After Orchestrator middleware executes, but before manifest handler executes gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid
 	// DBG Executing ManifestHandler (orchestrator.entur.io/example/v1, Example, plan) gorch_action=plan gorch_file_name= gorch_github_user_id=0 gorch_request_id=mockid

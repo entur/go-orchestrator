@@ -5,20 +5,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/entur/go-orchestrator"
 	"github.com/kaptinlin/jsonschema"
 )
 
-const defaultTimeout = 10 * time.Second
-const defaultDialerTimeout = 5 * time.Second
-
 // -----------------------
 // Sub-Orchestrator Manifest Handler (Airplane)
 // -----------------------
 
-// Airplane Manifest ---V
+// Airplane Manifest
 type AirplaneManifest struct {
 	orchestrator.ManifestHeader
 	Metadata AirplaneManifestMetadata `json:"metadata" jsonschema:"required"`
@@ -35,7 +31,7 @@ type AirplaneManifestSpec struct {
 
 var AirplanManifestSchema = jsonschema.FromStruct[AirplaneManifest]()
 
-// Airplane Manifest Handler ---V
+// Airplane Manifest Handler
 type AirplaneManifestHandler struct{
 	db *sql.DB
 }
@@ -81,7 +77,7 @@ func (so *AirplaneManifestHandler) MiddlewareAfter(ctx context.Context, req orch
 
 func (h *AirplaneManifestHandler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	//logger := logging.Ctx(ctx)
-	manifest, ok := orchestrator.Ctx(ctx).Get("manifest").(AirplaneManifest)
+	_, ok := orchestrator.Ctx(ctx).Get("manifest").(AirplaneManifest)
 	if !ok {
 		return fmt.Errorf("couldn't retrieve parsed manifest")
 	}
@@ -91,7 +87,7 @@ func (h *AirplaneManifestHandler) Plan(ctx context.Context, req orchestrator.Req
 
 func (h *AirplaneManifestHandler) PlanDestroy(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	//logger := logging.Ctx(ctx)
-	manifest, ok := orchestrator.Ctx(ctx).Get("manifest").(AirplaneManifest)
+	_, ok := orchestrator.Ctx(ctx).Get("manifest").(AirplaneManifest)
 	if !ok {
 		return fmt.Errorf("couldn't retrieve parsed manifest")
 	}
@@ -101,7 +97,7 @@ func (h *AirplaneManifestHandler) PlanDestroy(ctx context.Context, req orchestra
 
 func (h *AirplaneManifestHandler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	//logger := logging.Ctx(ctx)
-	manifest, ok := orchestrator.Ctx(ctx).Get("manifest").(AirplaneManifest)
+	_, ok := orchestrator.Ctx(ctx).Get("manifest").(AirplaneManifest)
 	if !ok {
 		return fmt.Errorf("couldn't retrieve parsed manifest")
 	}

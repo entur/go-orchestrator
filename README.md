@@ -78,7 +78,7 @@ func NewMyMinimalSubOrch(projectID string, handlers ...orchestrator.ManifestHand
 // Sub-Orchestrator Manifest Handlers
 // -----------------------
 
-// Your Manifest Definition --V
+// Your Manifest Definition
 type MyMinimalManifest struct {
 	orchestrator.ManifestHeader
 	Metadata MyMinimalManifestMetadata `json:"metadata"`
@@ -93,7 +93,7 @@ type MyMinimalManifestSpec struct {
 	Here   int      `json:"here"`
 }
 
-// Your Manifest Handler ---V
+// Your Manifest Handler
 type MyMinimalManifestHandler struct{}
 
 func (h *MyMinimalManifestHandler) APIVersion() orchestrator.APIVersion {
@@ -192,6 +192,8 @@ func ErrorGeneratingFunction() error {
 	return fmt.Errorf("this is an internal error")
 }
 
+// PR OUTPUT:
+// An internal error occurred. Please refer to the documentation for support
 func (h *Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	err := ErrorGeneratingFunction()
 	if err != nil {
@@ -213,6 +215,9 @@ To handle such failures approriately, the end result should be marked as having 
 
 ```go
 
+// PR OUTPUT:
+// Invalid manifest:
+// json: cannot unmarshal array into Go struct field
 func (h *Handler) Plan(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest MyManifest
 	
@@ -237,13 +242,13 @@ During the processing of a Platform Orchestrator Request in a Sub-Orchestrator, 
 
 type MyManifest struct {
 	orchestrator.ManifestHeader
-	Metadata MyMinimalManifestMetadata `json:"metadata"`
-	Spec     MyMinimalManifestSpec     `json:"spec"`
+	Metadata MyManifestMetadata `json:"metadata"`
+	Spec     MyManifestSpec     `json:"spec"`
 }
 
-type MyManifestManifestMetadata = orchestrator.ManifestMetadata // Default metadata definition, but you can use your own
+type MyManifestMetadata = orchestrator.ManifestMetadata // Default metadata definition, but you can use your own
 
-type MyManifestManifestSpec struct {
+type MyManifestSpec struct {
 	Environment   string   `json:"clubName"`
 }
 
@@ -252,9 +257,15 @@ type AdvancedChange struct {
 }
 
 func (change AdvancedChange) String() string {
-	return fmt.Sprintf("%d terraform resources", change.Plan.NumberOfResources)
+	return fmt.Sprintf("%d Terraform resources", change.Plan.NumberOfResources)
 }
 
+// PR OUTPUT:
+// Applying the following changes to the GCP application 'project-id':
+// 
+// Create:
+// + Grafana dashboards
+// + 36 Terraform resources
 func (h *Handler) Apply(ctx context.Context, req orchestrator.Request, r *orchestrator.Result) error {
 	var manifest MyManifest
 	

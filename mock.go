@@ -8,6 +8,7 @@ import (
 )
 
 const DefaultMockRequestID = "mockid"                             // Default Request ID used in PO request mocks.
+const DefaultMockContextID = "mockid"                             // Default Context ID used in PO request mocks.
 const DefaultMockResponseTopic = "mocktopic"                      // Default Topic ID used in PO request mocks.
 const DefaultMockPullRequestState = PullRequestStateOpen          // Default Pull Request state used in PO request mocks.
 const DefaultMockRepositoryName = "mockrepo"                      // Default Repository name used in PO request mocks.
@@ -50,6 +51,7 @@ func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 		APIVersion: "orchestrator.entur.io/request/v1",
 		Metadata: RequestMetadata{
 			RequestID: DefaultMockRequestID,
+			ContextID: DefaultMockContextID,
 		},
 		Origin: Origin{
 			PullRequest: PullRequest{

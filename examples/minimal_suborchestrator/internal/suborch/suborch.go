@@ -36,7 +36,7 @@ func NewMyMinimalSubOrch(projectID string, handlers ...orchestrator.ManifestHand
 // Sub-Orchestrator Manifest Handlers
 // -----------------------
 
-// Your Manifest Definition --V
+// Your Manifest Definition
 type MyMinimalManifest struct {
 	orchestrator.ManifestHeader
 	Metadata MyMinimalManifestMetadata `json:"metadata"`
@@ -51,7 +51,7 @@ type MyMinimalManifestSpec struct {
 	Here   int      `json:"here"`
 }
 
-// Your Manifest Handler ---V
+// Your Manifest Handler
 type MyMinimalManifestHandler struct{}
 
 func (h *MyMinimalManifestHandler) APIVersion() orchestrator.APIVersion {
