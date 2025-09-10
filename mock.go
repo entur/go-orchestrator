@@ -8,6 +8,7 @@ import (
 )
 
 const DefaultMockRequestID = "mockid"                             // Default Request ID used in PO request mocks.
+const DefaultMockContextID = "mockid"                             // Default Context ID used in PO request mocks.
 const DefaultMockResponseTopic = "mocktopic"                      // Default Topic ID used in PO request mocks.
 const DefaultMockPullRequestState = PullRequestStateOpen          // Default Pull Request state used in PO request mocks.
 const DefaultMockRepositoryName = "mockrepo"                      // Default Repository name used in PO request mocks.
@@ -36,7 +37,7 @@ func WithSender(sender Sender) MockRequestOption {
 
 func WithIAMEndpoint(url string) MockRequestOption {
 	return func(req *Request) {
-		req.Resources.IAM.URL = url
+		req.Resources.IAMLookup.URL = url
 	}
 }
 
@@ -48,8 +49,9 @@ func NewMockRequest(manifest any, opts ...MockRequestOption) (*Request, error) {
 
 	req := &Request{
 		APIVersion: "orchestrator.entur.io/request/v1",
-		Metadata: OuterMetadata{
+		Metadata: RequestMetadata{
 			RequestID: DefaultMockRequestID,
+			ContextID: DefaultMockContextID,
 		},
 		Origin: Origin{
 			PullRequest: PullRequest{
