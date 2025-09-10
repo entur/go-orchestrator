@@ -1,4 +1,7 @@
-# go-orchestrator
+<h1 align="center">
+      <img src="logo.png" width="128px" height="128px" />
+      <br>entur/go-orchestrator<br>
+</h1>
 
 Go-Orchestrator is intended as a simple-to-use SDK for writing Sub-Orchestrators at Entur, as specified by the [Platform Orchestrator specification](https://github.com/entur/platform-orchestrator/tree/main/docs/architecture/reference/v1). 
 It is written in Golang, and contains predefined type declarations, jsonschema validation rules, handler versioning, and mockers to make it as easy as possible to safely implement your dream Sub-Orchestrator.
