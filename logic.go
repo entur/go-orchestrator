@@ -146,7 +146,7 @@ func Process(ctx context.Context, so Orchestrator, req *Request) *Result {
 				suggestions = append(suggestions, suggestion)
 			}
 
-			msg := fmt.Sprintf("The manifest apiVersion '%s' and kind '%s' is not valid. Perhaps you actually intended to use one of the following value combinations instead:\n%s", strings.Join(suggestions, "\n"))
+			msg := fmt.Sprintf("The manifest apiVersion '%s' and kind '%s' is not valid. Perhaps you actually intended to use one of the following value combinations instead:\n%s", header.APIVersion, header.Kind, strings.Join(suggestions, "\n"))
 			result.Fail(msg)
 		}
 	}
