@@ -140,6 +140,7 @@ func Process(ctx context.Context, so Orchestrator, req *Request) *Result {
 
 		// If we couldn't find a match, mark the result as having failed, and provide the user with a list of possible valid alternatives
 		if !match {
+			logger.Debug().Msgf("Could not find ManifestHandler (%s, %s)", header.APIVersion, header.Kind)
 			suggestions := make([]string, 0, len(handlers))
 			for _, handler := range handlers {
 				suggestion := fmt.Sprintf("apiVersion: %s\nkind: %s", handler.APIVersion(), handler.Kind())
