@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"cloud.google.com/go/pubsub/v2"
 	"github.com/entur/go-logging"
@@ -113,30 +114,41 @@ func respond(ctx context.Context, publisher *pubsub.Publisher, res *Response) er
 // Core
 // -----------------------
 
-func Process(ctx context.Context, so Orchestrator, req *Request) Result {
+func Process(ctx context.Context, so Orchestrator, req *Request) *Result {
 	logger := logging.Ctx(ctx)
 	logger.Debug().Interface("gorch_request", req).Msg("Processing request")
 
-	var result Result
 	var header ManifestHeader
+	result := &Result{}
 
 	err := json.Unmarshal(req.Manifest.New, &header)
 	if err != nil {
 		err = fmt.Errorf("unable to unmarshal ManifestHeader: %w", err)
 	} else {
-		match := false
+		handlers := so.Handlers()
 
-		for _, h := range so.Handlers() {
-			if header.APIVersion == h.APIVersion() && header.Kind == h.Kind() {
+		// Loop through all manifest handlers in the so, and run the first one with a matching APIVersion and Kind.
+		match := false
+		for _, handler := range handlers {
+			if header.APIVersion == handler.APIVersion() && header.Kind == handler.Kind() {
 				logger.Debug().Msgf("Found ManifestHandler (%s, %s)", header.APIVersion, header.Kind)
-				err = process(ctx, so, h, req, &result)
+				err = process(ctx, so, handler, req, result)
 				match = true
 				break
 			}
 		}
 
+		// If we couldn't find a match, mark the result as having failed, and provide the user with a list of possible valid alternatives
 		if !match {
-			err = fmt.Errorf("no matching ManifestHandler for (%s, %s)", header.APIVersion, header.Kind)
+			logger.Debug().Msgf("Could not find ManifestHandler (%s, %s)", header.APIVersion, header.Kind)
+			suggestions := make([]string, 0, len(handlers))
+			for _, handler := range handlers {
+				suggestion := fmt.Sprintf("apiVersion: %s\nkind: %s", handler.APIVersion(), handler.Kind())
+				suggestions = append(suggestions, suggestion)
+			}
+
+			msg := fmt.Sprintf("The manifest apiVersion '%s' and kind '%s' is not valid. Perhaps you actually intended to use one of the following value combinations instead:\n%s", header.APIVersion, header.Kind, strings.Join(suggestions, "\n"))
+			result.Fail(msg)
 		}
 	}
 
