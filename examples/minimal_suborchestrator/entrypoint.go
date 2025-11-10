@@ -15,12 +15,11 @@ import (
 
 func init() {
 	// Read Config!
-	projectID := os.Getenv("PROJECT_ID")
 	functionEntrypoint := os.Getenv("FUNCTION_ENTRYPOINT")
 
 	// Setup Sub-Orchestrator!
 	mh := suborch.NewMyMinimalManifestHandler()
-	so := suborch.NewMyMinimalSubOrch(projectID, mh)
+	so := suborch.NewMyMinimalSubOrch(mh)
 
 	// Start Cloud Function!
 	h := orchestrator.NewCloudEventHandler(so)

@@ -273,7 +273,6 @@ type ManifestHandler interface {
 
 // The Orchestrator interface represents the main configuration of a sub-orchestrator in a Project.
 type Orchestrator interface {
-	ProjectID() string           // The project this orchestrator is running in
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 
@@ -432,31 +431,27 @@ func (r *Result) Output() string {
 
 	if r.summary != "" {
 		builder.WriteString(r.summary)
-		builder.WriteString("\n")
 	}
 
 	if len(r.creations) > 0 {
-		builder.WriteString("Create:\n")
+		builder.WriteString("\nCreate:")
 		for _, create := range r.creations {
-			builder.WriteString("+ ")
+			builder.WriteString("\n+ ")
 			builder.WriteString(create.String())
-			builder.WriteString("\n")
 		}
 	}
 	if len(r.updates) > 0 {
-		builder.WriteString("Update:\n")
+		builder.WriteString("\nUpdate:")
 		for _, update := range r.updates {
-			builder.WriteString("! ")
+			builder.WriteString("\n! ")
 			builder.WriteString(update.String())
-			builder.WriteString("\n")
 		}
 	}
 	if len(r.deletions) > 0 {
-		builder.WriteString("Delete:\n")
+		builder.WriteString("\nDelete:")
 		for _, delete := range r.deletions {
-			builder.WriteString("- ")
+			builder.WriteString("\n- ")
 			builder.WriteString(delete.String())
-			builder.WriteString("\n")
 		}
 	}
 

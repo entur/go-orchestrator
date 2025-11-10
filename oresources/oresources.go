@@ -126,6 +126,9 @@ func (iam *IAMLookupClient) GCPUserHasRoleInProjects(ctx context.Context, email 
 		if status != http.StatusOK {
 			return false, nil
 		}
+		if !resBody.HasAccess {
+			return false, nil
+		}
 	}
 
 	return true, nil

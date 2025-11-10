@@ -19,7 +19,6 @@ import (
 
 func init() {
 	// Read Config!
-	projectID := os.Getenv("PROJECT_ID")
 	functionEntrypoint := os.Getenv("FUNCTION_ENTRYPOINT")
 
 	// Setup Logging!
@@ -34,7 +33,7 @@ func init() {
 	// Setup Sub-Orchestrator!
 	amh := suborch.NewAirplaneManifestHandler(db)
 	cmh := suborch.NewCarManifestHandler(db)
-	so := suborch.NewVehiclesSubOrch(projectID, amh, cmh)
+	so := suborch.NewVehiclesSubOrch(amh, cmh)
 
 	// Start Cloud Function!
 	h := orchestrator.NewCloudEventHandler(so, orchestrator.WithCustomLogger(logger))

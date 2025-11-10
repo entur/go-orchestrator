@@ -11,12 +11,7 @@ import (
 // -----------------------
 
 type VehicleSubOrch struct {
-	projectID string
 	handlers  []orchestrator.ManifestHandler
-}
-
-func (so *VehicleSubOrch) ProjectID() string {
-	return so.projectID
 }
 
 func (so *VehicleSubOrch) Handlers() []orchestrator.ManifestHandler {
@@ -33,9 +28,8 @@ func (so *VehicleSubOrch) MiddlewareAfter(ctx context.Context, req orchestrator.
 	return nil
 } 
 
-func NewVehiclesSubOrch(projectID string, handlers ...orchestrator.ManifestHandler) *VehicleSubOrch {
+func NewVehiclesSubOrch(handlers ...orchestrator.ManifestHandler) *VehicleSubOrch {
 	return &VehicleSubOrch{
-		projectID: projectID,
 		handlers:  handlers,
 	}
 }

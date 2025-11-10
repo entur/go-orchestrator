@@ -24,14 +24,13 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 	})
 	logger := logging.Ctx(ctx)
 
-	project := so.ProjectID()
 	version := h.APIVersion()
 	kind := h.Kind()
 	action := req.Action
 
 	before, ok := so.(MiddlewareBefore)
 	if ok {
-		logger.Debug().Msgf("Executing Orchestrator MiddlewareBefore (%s)", project)
+		logger.Debug().Msgf("Executing Orchestrator MiddlewareBefore")
 		err = before.MiddlewareBefore(ctx, *req, res)
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (before): %w", err)
@@ -80,7 +79,7 @@ func process(ctx context.Context, so Orchestrator, h ManifestHandler, req *Reque
 
 	after, ok = so.(MiddlewareAfter)
 	if ok {
-		logger.Debug().Msgf("Executing Orchestrator MiddlewareAfter (%s)", project)
+		logger.Debug().Msgf("Executing Orchestrator MiddlewareAfter")
 		err = after.MiddlewareAfter(ctx, *req, res)
 		if err != nil {
 			return fmt.Errorf("orchestrator middleware (after): %w", err)
