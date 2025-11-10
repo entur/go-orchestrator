@@ -83,7 +83,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 	if cfg.clientSet {
 		client = cfg.client
 	} else {
-		client, _ = pubsub.NewClient(context.Background(), so.ProjectID())
+		client, _ = pubsub.NewClient(context.Background(), "unusedID")
 	}
 
 	publishers := map[string]*pubsub.Publisher{}
@@ -119,7 +119,7 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 				Interface("gorch_result_deletions", result.deletions)
 		})
 		ctx = logger.WithContext(ctx)
-		
+
 		if client == nil {
 			logger.Warn().Msg("Pubsub client is set to null, no responses will be sent")
 		} else {

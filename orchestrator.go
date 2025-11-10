@@ -273,7 +273,6 @@ type ManifestHandler interface {
 
 // The Orchestrator interface represents the main configuration of a sub-orchestrator in a Project.
 type Orchestrator interface {
-	ProjectID() string           // The project this orchestrator is running in
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 

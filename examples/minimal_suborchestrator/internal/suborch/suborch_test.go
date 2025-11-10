@@ -14,7 +14,7 @@ import (
 
 func TestIntegration(t *testing.T) {
 	mh := NewMyMinimalManifestHandler()
-	so := NewMyMinimalSubOrch("mock", mh)
+	so := NewMyMinimalSubOrch(mh)
 
 	// Our mock manifest that we want to test
 	mockManifest := MyMinimalManifest{

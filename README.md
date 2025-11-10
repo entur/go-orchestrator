@@ -41,12 +41,11 @@ import (
 
 func init() {
 	// Read Config!
-	projectID := os.Getenv("PROJECT_ID")
 	functionEntrypoint := os.Getenv("FUNCTION_ENTRYPOINT")
 
 	// Setup Sub-Orchestrator!
 	mh := NewMyMinimalManifestHandler()
-	so := NewMyMinimalSubOrch(projectID, mh)
+	so := NewMyMinimalSubOrch(mh)
 
 	// Start Cloud Function!
 	h := orchestrator.NewCloudEventHandler(so)
@@ -58,21 +57,15 @@ func init() {
 // -----------------------
 
 type MyMinimalSubOrch struct {
-	projectID string
 	handlers  []orchestrator.ManifestHandler
-}
-
-func (so *MyMinimalSubOrch) ProjectID() string {
-	return so.projectID
 }
 
 func (so *MyMinimalSubOrch) Handlers() []orchestrator.ManifestHandler {
 	return so.handlers
 }
 
-func NewMyMinimalSubOrch(projectID string, handlers ...orchestrator.ManifestHandler) *MyMinimalSubOrch {
+func NewMyMinimalSubOrch(handlers ...orchestrator.ManifestHandler) *MyMinimalSubOrch {
 	return &MyMinimalSubOrch{
-		projectID: projectID,
 		handlers:  handlers,
 	}
 }
@@ -141,7 +134,6 @@ The `Orchestrator` interface is as follows:
 
 ```go
 type Orchestrator interface {
-	ProjectID() string           // The project this orchestrator is running in
 	Handlers() []ManifestHandler // The manifests this orchestrator can handle
 }
 ```
