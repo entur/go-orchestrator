@@ -89,7 +89,7 @@ func (s *MockIAMLookupServer) hGCPUserHasRoleInProjects(w http.ResponseWriter, r
 
 	project, ok := s.userProjectRoles[reqBody.Resource]
 	if ok {
-		userRoles := project[reqBody.Role]
+		userRoles := project[reqBody.User]
 		for _, role := range userRoles {
 			if role == reqBody.Role {
 				resBody.HasAccess = true
