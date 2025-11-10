@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.2](https://github.com/entur/go-orchestrator/compare/v1.7.1...v1.7.2) (2025-11-10)
+
+
+### Bug Fixes
+
+* Miscellaneous (but important) fixes ([#78](https://github.com/entur/go-orchestrator/issues/78)) ([34d5332](https://github.com/entur/go-orchestrator/commit/34d5332207a33f83335619efaf1632fc00afc722))
+
 ## [1.7.1](https://github.com/entur/go-orchestrator/compare/v1.7.0...v1.7.1) (2025-09-11)
 
 
