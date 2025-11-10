@@ -23,6 +23,12 @@ const DefaultMockAction = ActionPlan                              // Default Use
 
 type MockRequestOption func(*Request)
 
+func WithVisibility(visbility RepositoryVisibility) MockRequestOption {
+	return func(req *Request) {
+		req.Origin.Repository.Visibility = visbility
+	}
+}
+
 func WithAction(action Action) MockRequestOption {
 	return func(req *Request) {
 		req.Action = action
