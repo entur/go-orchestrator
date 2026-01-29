@@ -102,17 +102,11 @@ func NewCloudEventHandler(so Orchestrator, opts ...HandlerOption) func(context.C
 		}
 
 		logger.UpdateContext(func(c zerolog.Context) zerolog.Context {
-			if req.Sender != nil {
-				c = c.Int("gorch_github_user_id", req.Sender.ID)
-			}
-			if req.Metadata != nil {
-				c = c.Str("gorch_context_id", req.Metadata.ContextID).
-					Str("gorch_request_id", req.Metadata.RequestID)
-			}
-			if req.Origin != nil {
-				c = c.Str("gorch_file_name", req.Origin.FileName)
-			}
-			return c.Str("gorch_action", string(req.Action))
+			return c.Int("gorch_github_user_id", req.Sender.ID).
+				Str("gorch_context_id", req.Metadata.ContextID).
+				Str("gorch_request_id", req.Metadata.RequestID).
+				Str("gorch_file_name", req.Origin.FileName).
+				Str("gorch_action", string(req.Action))
 		})
 
 		ctx = logger.WithContext(ctx)
