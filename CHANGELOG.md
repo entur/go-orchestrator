@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.3](https://github.com/entur/go-orchestrator/compare/v1.7.2...v1.7.3) (2026-01-29)
+
+
+### Bug Fixes
+
+* add contextId to logging entries ([#93](https://github.com/entur/go-orchestrator/issues/93)) ([671044b](https://github.com/entur/go-orchestrator/commit/671044beea6a07bc8fd7acd1571647c0b5b82cee))
+
 ## [1.7.2](https://github.com/entur/go-orchestrator/compare/v1.7.1...v1.7.2) (2025-11-10)
 
 
