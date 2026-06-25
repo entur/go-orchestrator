@@ -1,0 +1,63 @@
+# Continuous Integration — kvalitet golden-path variant (Go library).
+#
+# Reusable (workflow_call) AND directly triggered on pull_request. Reproduces the
+# lint + build + test pipeline previously in go.yml. The test job is skipped for
+# dependabot PRs; dependabot reuses this workflow via dependabot-pr.yml after approval.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+# Least-privilege default for the whole workflow; jobs widen only as needed.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and Test
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: "./go.mod"
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v8
+        with:
+          version: v2.4
+          args: --timeout 5m ./...
+
+      - name: Test
+        run: go test -json -coverpkg=./... -coverprofile=coverage.out ./... > test-report.json
+
+  ci:
+    name: CI
+    needs: [test]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: All required CI jobs passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "::error::A required CI job failed"
+            exit 1
+          fi
