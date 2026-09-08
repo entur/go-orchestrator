@@ -1,13 +1,13 @@
 module github.com/entur/go-orchestrator
 
-go 1.25.8
+go 1.26.0
 
 require (
 	cloud.google.com/go/pubsub/v2 v2.7.0
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/entur/go-logging v1.6.0
 	github.com/rs/zerolog v1.35.1
-	google.golang.org/api v0.294.0
+	google.golang.org/api v0.297.0
 )
 
 require (
