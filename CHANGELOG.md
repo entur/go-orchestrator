@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.4](https://github.com/entur/go-orchestrator/compare/v1.7.3...v1.7.4) (2026-09-23)
+
+
+### Bug Fixes
+
+* **ci:** bump golangci-lint in release workflow to v2.9.0 ([#144](https://github.com/entur/go-orchestrator/issues/144)) ([1910dda](https://github.com/entur/go-orchestrator/commit/1910ddaec5c32869f036b70c26ce4734f6d113ba))
+
 ## [1.7.3](https://github.com/entur/go-orchestrator/compare/v1.7.2...v1.7.3) (2026-01-29)
 
 
