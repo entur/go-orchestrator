@@ -4,21 +4,13 @@ updates:
   directory: "/"
   schedule:
     interval: "weekly"
+  open-pull-requests-limit: 100 # Effectively unlimited
 - package-ecosystem: "gomod"
   directory: "/"
   exclude-paths:
     - "examples/**"
-  groups:
-    minor-and-patch:
-      applies-to: version-updates
-      update-types:
-      - "minor"
-      - "patch"
-    major-updates:
-      applies-to: version-updates
-      update-types:
-      - "major"
   schedule:
     interval: "weekly"
+  open-pull-requests-limit: 100 # Effectively unlimited
   cooldown:
       default-days: 5

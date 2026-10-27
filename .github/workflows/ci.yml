@@ -1,14 +1,12 @@
 # Continuous Integration — kvalitet golden-path variant (Go library).
 #
-# Reusable (workflow_call) AND directly triggered on pull_request. Reproduces the
-# lint + build + test pipeline previously in go.yml. The test job is skipped for
-# dependabot PRs; dependabot reuses this workflow via dependabot-pr.yml after approval.
+# Triggered on pull_request. Reproduces the lint + build + test pipeline
+# previously in go.yml. Runs on Dependabot PRs too, so Freyja assesses tested bumps.
 name: CI
 
 on:
   pull_request:
     branches: [main]
-  workflow_call:
 
 # Least-privilege default for the whole workflow; jobs widen only as needed.
 permissions:
@@ -21,7 +19,6 @@ concurrency:
 jobs:
   test:
     name: Build and Test
-    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
