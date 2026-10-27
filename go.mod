@@ -3,11 +3,11 @@ module github.com/entur/go-orchestrator
 go 1.26.0
 
 require (
-	cloud.google.com/go/pubsub/v2 v2.7.0
+	cloud.google.com/go/pubsub/v2 v2.8.0
 	github.com/cloudevents/sdk-go/v2 v2.16.2
 	github.com/entur/go-logging v1.6.0
 	github.com/rs/zerolog v1.35.1
-	google.golang.org/api v0.304.0
+	google.golang.org/api v0.308.0
 )
 
 require (
@@ -45,7 +45,7 @@ require (
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260715232425-e75dac1f907d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261019180522-ce908d29299b // indirect
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
